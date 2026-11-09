@@ -211,7 +211,7 @@ GL.CARS = [
     fact: 'Su caja de cambios "Light Speed" salta de cualquier marcha a cualquier otra casi al instante. Con etanol E85 da 1.600 CV.', tags: ['v8'], approx: ['accel', 'top'] }
 ];
 
-/* Pósters ilustrados (infografías creadas por papá) disponibles para estos coches */
+/* Pósters ilustrados (infografías creadas por la familia) disponibles para estos coches */
 GL.POSTERS = ['aston-valkyrie', 'bugatti-bolide', 'bugatti-chiron', 'bugatti-veyron', 'ferrari-458', 'ferrari-enzo', 'ferrari-f8',
   'ferrari-laferrari', 'ferrari-sf90', 'koenigsegg-jesko', 'lambo-aventador', 'lambo-huracan', 'lambo-murcielago', 'lambo-revuelto',
   'mclaren-720s', 'mclaren-p1', 'pagani-huayra', 'porsche-gt3rs'];
@@ -226,7 +226,7 @@ GL.PACKS = {
                desc: '5 cromos · 1 Legendaria o mejor garantizada' }
 };
 
-/* Tareas de recompensa por defecto (papá/mamá puede editarlas en el panel parental) */
+/* Tareas de recompensa por defecto (los padres pueden editarlas en el panel parental) */
 GL.DEFAULT_TASKS = [
   { id: 't-deberes', emoji: '📚', name: 'Deberes terminados',          reward: { pack: 'standard', n: 1 }, xp: 30 },
   { id: 't-estudio', emoji: '🧠', name: 'Estudio concentrado (45 min)', reward: { pack: 'standard', n: 1 }, xp: 40 },

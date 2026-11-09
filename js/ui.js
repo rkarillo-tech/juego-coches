@@ -137,7 +137,7 @@
       ['🔥', 'Si entras días seguidos, sube tu racha y ganas premios extra.'],
       ['🔧', 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.'],
       ['🏅', 'Al completar un coche ganas una medalla. Puedes mejorarla a plata y a oro.'],
-      ['📚', 'Haz los deberes, toca «¡Hecho!» en Premios y papá o mamá lo aprueba. ¡Ganas sobres!'],
+      ['📚', 'Haz los deberes, toca «¡Hecho!» en Premios y tus padres lo aprueban. ¡Ganas sobres!'],
       ['✅', 'Si no sabes qué hacer, mira el cuadro verde de Inicio.']] },
     home: { title: '🏠 Inicio', steps: [
       ['✅', 'El cuadro verde te dice qué hacer ahora. Toca su botón.'],
@@ -166,7 +166,7 @@
     rewards: { title: '🎯 Premios', steps: [
       ['📚', 'Cuando termines una tarea, toca «¡Hecho!».'],
       ['📲', 'Toca el botón verde para avisar por WhatsApp y después toca enviar.'],
-      ['👨‍👩‍👦', 'Papá o mamá la aprueba con su PIN o te manda un código.'],
+      ['👨‍👩‍👦', 'Tus padres la aprueban con su PIN o te mandan un código.'],
       ['📅', 'Cuantas más tareas a la semana, mejor premio semanal.'],
       ['🎟️', 'Si te mandan un código, escríbelo en «Canjear código».'],
       ['🏅', 'Los logros con botón amarillo están listos para cobrar.']] },
@@ -196,7 +196,7 @@
     { tab: 'album', sel: '#albumList .tile:not(.unknown):not(.locked)', ico: '🚗', t: 'Cada coche tiene 10 cromos. Cuando juntas los 10, el coche es tuyo y ganas una medalla.' },
     { sel: '.top-right .pill', ico: '🔧', t: 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.' },
     { sel: '.bottomnav [data-tab="rewards"]', ico: '🎯', t: 'Toca «Premios».', tap: true },
-    { tab: 'rewards', sel: '[data-act="request"]', ico: '📚', t: 'Cuando acabes los deberes, toca «¡Hecho!» y avisa a papá o mamá por WhatsApp. Cuando lo aprueben, ganas sobres.' },
+    { tab: 'rewards', sel: '[data-act="request"]', ico: '📚', t: 'Cuando acabes los deberes, toca «¡Hecho!» y avisa a tus padres por WhatsApp. Cuando lo aprueben, ganas sobres.' },
     { sel: '.bottomnav [data-tab="quiz"]', ico: '🧩', t: 'En «Desafío» respondes preguntas de coches y ganas créditos.' },
     { sel: '.bottomnav [data-tab="home"]', ico: '🏠', t: 'Toca «Inicio».', tap: true },
     { tab: 'home', sel: '#nextStep', ico: '✅', t: 'Aquí siempre verás qué hacer ahora. Si te pierdes, mira el cuadro verde.' },
@@ -282,7 +282,7 @@
     const craftable = GL.availableCars(S).filter(c => { const n = GL.count(S, c.id); return n >= 7 && n < 10 && S.credits >= GL.craftCost(c); }).sort((a, b) => GL.count(S, b.id) - GL.count(S, a.id))[0];
     if (craftable) return { ico: '🛠️', t: 'Tienes créditos para fabricar un cromo del ' + craftable.model + '.', btn: 'Ver coche', act: 'openCar', extra: 'data-car="' + craftable.id + '"' };
     if (GL.quizAvailable(S) > 0) return { ico: '🧩', t: 'Juega el Desafío y gana créditos.', btn: 'Jugar', act: 'go', extra: 'data-tab="quiz"' };
-    if (S.requests.length) return { ico: '⏳', t: 'Pide a papá o mamá que apruebe tus tareas.', btn: 'Ver', act: 'go', extra: 'data-tab="rewards"' };
+    if (S.requests.length) return { ico: '⏳', t: 'Pide a tus padres que aprueben tus tareas.', btn: 'Ver', act: 'go', extra: 'data-tab="rewards"' };
     return { ico: '📚', t: 'Haz tus deberes y pide tu premio para conseguir más sobres.', btn: 'Premios', act: 'go', extra: 'data-tab="rewards"' };
   }
   function nextStepCard() {
@@ -740,19 +740,19 @@
 
   /* ================= PREMIOS ================= */
   function rewardsView() {
-    setTimeout(() => tip('rewardsFirst', '📚', 'Cuando termines una tarea de verdad, toca «¡Hecho!». Después papá o mamá la aprueba con su PIN y recibes el premio.'), 500);
-    let h = helpBtn('rewards') + '<h2 class="sec">📚 Tareas con premio</h2><div class="small muted" style="margin:-4px 2px 10px">Cuando termines una tarea, pulsa <b>¡Hecho!</b> y pide a papá o mamá que la apruebe con su PIN.</div>';
+    setTimeout(() => tip('rewardsFirst', '📚', 'Cuando termines una tarea de verdad, toca «¡Hecho!». Después tus padres la aprueban con su PIN y recibes el premio.'), 500);
+    let h = helpBtn('rewards') + '<h2 class="sec">📚 Tareas con premio</h2><div class="small muted" style="margin:-4px 2px 10px">Cuando termines una tarea, pulsa <b>¡Hecho!</b> y pide a tus padres que la aprueben.</div>';
     const today = GL.dayKey();
     P.tasks.forEach(t => {
       const pend = S.requests.some(r => r.taskId === t.id && GL.dayKey(r.ts) === today);
       h += '<div class="task"><div class="te">' + esc(t.emoji) + '</div><div class="grow"><b style="font-size:14px">' + esc(t.name) + '</b><div class="tr">' + GL.rewardText(t.reward) + ' · +' + (t.xp || 20) + ' XP</div></div>' +
         (pend ? (P.parentPhone ? '<button class="btn small" data-act="notify" data-id="' + esc(t.id) + '">📲 Avisar</button>' : '<span class="tiny muted">⏳ Pendiente</span>') : '<button class="btn small green" data-act="request" data-id="' + esc(t.id) + '">¡Hecho!</button>') + '</div>';
     });
-    if (S.requests.length) h += '<div class="card mt12 row"><div style="font-size:24px">⏳</div><div class="grow small"><b>' + S.requests.length + ' tarea' + (S.requests.length > 1 ? 's' : '') + ' esperando aprobación</b><div class="muted">Papá/mamá: pulsa para aprobar con tu PIN.</div></div><button class="btn primary small" data-act="approveFlow">Aprobar</button></div>';
+    if (S.requests.length) h += '<div class="card mt12 row"><div style="font-size:24px">⏳</div><div class="grow small"><b>' + S.requests.length + ' tarea' + (S.requests.length > 1 ? 's' : '') + ' esperando aprobación</b><div class="muted">Para aprobarlas hace falta el PIN de los padres.</div></div><button class="btn primary small" data-act="approveFlow">Aprobar</button></div>';
 
     h += '<h2 class="sec">📅 Esta semana<span class="count">' + S.weekly.tasks + ' tareas aprobadas</span></h2>' + weeklyLadder();
 
-    h += '<h2 class="sec">🎟️ Canjear código</h2><div class="card"><div class="small muted">Si papá o mamá te envía un código desde su móvil, escríbelo aquí.</div><div class="row mt8"><input id="codeIn" placeholder="GL-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"><button class="btn primary" data-act="redeem">Canjear</button></div></div>';
+    h += '<h2 class="sec">🎟️ Canjear código</h2><div class="card"><div class="small muted">Si tus padres te envían un código desde su móvil, escríbelo aquí.</div><div class="row mt8"><input id="codeIn" placeholder="GL-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"><button class="btn primary" data-act="redeem">Canjear</button></div></div>';
 
     h += '<h2 class="sec">🏅 Logros<span class="count">' + S.achievements.length + '/' + GL.ACHIEVEMENTS.length + '</span></h2>' + achievementsList();
 
@@ -787,7 +787,7 @@
   }
   function requirePin(cb) {
     if (!P.pinHash) {
-      pinPad('Crear PIN parental', 'Papá/mamá: elige un PIN de 4 a 6 números. Sirve para aprobar tareas y proteger las copias de seguridad.', p1 => {
+      pinPad('Crear PIN parental', 'Solo para padres: elige un PIN de 4 a 6 números. Sirve para aprobar tareas y proteger las copias de seguridad.', p1 => {
         pinPad('Repite el PIN', 'Vuelve a escribir el mismo PIN.', p2 => {
           if (p1 !== p2) { sfx('error'); toast('Los PIN no coinciden. Inténtalo otra vez.'); closeSheet(); return; }
           P.salt = randomKey(12); P.pinHash = hashPin(p1, P.salt); if (!P.familyKey && !P.isParentDevice) P.familyKey = randomKey(10); saveP();
@@ -797,7 +797,7 @@
       return;
     }
     if (Date.now() < (P.lockUntil || 0)) { toast('Demasiados intentos. Espera ' + Math.ceil((P.lockUntil - Date.now()) / 1000) + ' s.'); return; }
-    pinPad('PIN parental', 'Solo para papá o mamá.', pin => {
+    pinPad('PIN parental', 'Solo para padres.', pin => {
       if (hashPin(pin, P.salt) === P.pinHash) { P.fails = 0; saveP(); closeSheet(); cb(); }
       else {
         P.fails = (P.fails || 0) + 1; if (P.fails >= 5) { P.lockUntil = Date.now() + 60000 * Math.min(10, P.fails - 4); }
@@ -861,7 +861,7 @@
     return '📚 ¡He terminado: ' + t.name + '! ¿Me lo apruebas?\n\nPremio: ' + GL.rewardText(t.reward).replace(/🔧/g, 'créditos') + '\n\n👉 Para aprobarlo toca aquí: ' + link;
   }
   function notifySheet(t) {
-    const b = '<div class="center"><div style="font-size:54px">📲</div><div class="tip-txt mt8" style="font-size:18px">Avisa a papá o mamá de que has terminado.</div>' + sayBtn('Avisa a papá o mamá de que has terminado. Toca el botón verde y después toca enviar en WhatsApp.') +
+    const b = '<div class="center"><div style="font-size:54px">📲</div><div class="tip-txt mt8" style="font-size:18px">Avisa a tus padres de que has terminado.</div>' + sayBtn('Avisa a tus padres de que has terminado. Toca el botón verde y después toca enviar en WhatsApp.') +
       '<div class="card mt12 small" style="text-align:left">1️⃣ Toca el botón verde.<br>2️⃣ Se abre WhatsApp con el mensaje ya escrito.<br>3️⃣ Toca <b>enviar</b> ➤.</div>' +
       '<button class="btn green block mt16" style="font-size:17px;padding:16px" data-act="sendWa" data-id="' + esc(t.id) + '">💬 Avisar por WhatsApp</button><button class="btn ghost block mt8" data-act="closeSheet">Ahora no</button></div>';
     openSheet('Avisar', b);
@@ -895,7 +895,7 @@
   function redeemCode(raw) {
     const code = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/^GL/, '');
     if (code.length !== 12) return toast('El código debe tener 12 caracteres (GL-XXXX-XXXX-XXXX).');
-    if (!P.familyKey) return toast('Este móvil aún no tiene clave familiar. Papá/mamá debe crear el PIN primero.');
+    if (!P.familyKey) return toast('Este móvil aún no tiene clave familiar. Tus padres deben crear el PIN primero.');
     if (S.redeemed.includes(code)) return toast('Este código ya se canjeó.');
     const payload = code.slice(0, 7), sig = code.slice(7);
     if (signCode(payload) !== sig) { sfx('error'); return toast('Código no válido. Revisa que esté bien escrito.'); }
@@ -1026,7 +1026,7 @@
       '<div class="card small"><b>📦 Sobres</b><br>Cada día tienes un sobre gratis. Si vienes días seguidos sube tu racha 🔥: al 3.er día, créditos extra; cada 7 días, un sobre Nitro; a los 30, un sobre Apex.</div>' +
       '<div class="card small"><b>💎 Rarezas</b><br>Común, Rara, Épica, Legendaria y Mítica. Cuanto más exclusivo es el coche en la vida real, más difícil es conseguirlo. Los míticos se desbloquean subiendo de nivel.</div>' +
       '<div class="card small"><b>🔧 Repetidos y Taller</b><br>Los repetidos se convierten en créditos. Con ellos fabricas el cromo exacto que te falta, compras sobres o pides un cromo sorpresa.</div>' +
-      '<div class="card small"><b>📚 Premios por estudiar</b><br>Termina deberes o tareas, pulsa ¡Hecho! en Premios y que papá o mamá lo apruebe. ¡Cuantas más tareas a la semana, mejores premios!</div>' +
+      '<div class="card small"><b>📚 Premios por estudiar</b><br>Termina deberes o tareas, pulsa ¡Hecho! en Premios y que tus padres lo aprueben. ¡Cuantas más tareas a la semana, mejores premios!</div>' +
       '<div class="card small"><b>🧩 Desafío</b><br>3 partidas al día de preguntas sobre coches para ganar créditos y aprender.</div>');
   }
   function creditsSheet() {
@@ -1088,7 +1088,7 @@
       const t = P.tasks.find(x => x.id === d.id); if (!t) return;
       S.requests.push({ id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000), taskId: t.id, ts: Date.now() });
       save(); sfx('tap'); render();
-      if (P.parentPhone) notifySheet(t); else toast('⏳ Apuntado. Pide a papá o mamá que lo apruebe.');
+      if (P.parentPhone) notifySheet(t); else toast('⏳ Apuntado. Pide a tus padres que lo aprueben.');
     },
     notify: d => { const t = P.tasks.find(x => x.id === d.id); if (t) notifySheet(t); },
     sendWa: d => { const t = P.tasks.find(x => x.id === d.id); if (!t) return; closeSheet(); waOpen(P.parentPhone, requestMessage(t)); toast('📲 ¡Aviso preparado! Ahora toca enviar en WhatsApp.'); },
@@ -1124,7 +1124,7 @@
     delTask: d => { readTaskEdits(); P.tasks.splice(+d.i, 1); saveP(); parentPanel(); },
     saveTasks: () => { readTaskEdits(); saveP(); toast('💾 Tareas guardadas'); render(); },
     saveMax: () => { P.maxPerDay = Math.max(1, Math.min(20, +$('#maxDay').value || 5)); saveP(); toast('Límite guardado'); },
-    pGrant: d => { if (d.v === 'credits') S.credits += 200; else S.packs[d.v]++; GL.log(S, '🎁', 'Regalo de papá/mamá'); save(); toast('🎁 Añadido'); render(); },
+    pGrant: d => { if (d.v === 'credits') S.credits += 200; else S.packs[d.v]++; GL.log(S, '🎁', 'Regalo de tus padres'); save(); toast('🎁 Añadido'); render(); },
     changePin: () => { P.pinHash = null; saveP(); requirePin(parentPanel); },
     resetAll: () => {
       if (!confirm('¿Seguro que quieres BORRAR todo el álbum? Haz antes una copia de seguridad. Esto no se puede deshacer.')) return;
