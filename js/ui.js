@@ -34,8 +34,10 @@
     try { P = JSON.parse(lsGet(PKEY) || 'null'); } catch (e) { P = null; }
     if (!P) P = { pinHash: null, salt: null, familyKey: null, tasks: GL.DEFAULT_TASKS.map(t => Object.assign({}, t)), maxPerDay: 5, fails: 0, lockUntil: 0 };
     GL.touchClock(S); GL.ensureMissions(S); GL.ensureWeek(S);
+    applyEasy();
     save();
   }
+  function applyEasy() { document.body.classList.toggle('easy', S.settings.easyRead !== false); }
   function save() {
     lsSet(KEY, JSON.stringify(S));
     hud();
@@ -96,6 +98,214 @@
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 3200);
   }
 
+  /* ================= Lectura en voz alta ================= */
+  const cleanSpeech = t => String(t).replace(/<[^>]+>/g, ' ').replace(/🔧/g, ' créditos ').replace(/[#★]/g, ' ')
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{2B50}]/gu, '').replace(/\s+/g, ' ').trim();
+  function speak(text, btn) {
+    if (!('speechSynthesis' in window)) { toast('Este móvil no puede leer en voz alta.'); return; }
+    try {
+      speechSynthesis.cancel();
+      document.querySelectorAll('.say.speaking').forEach(b => b.classList.remove('speaking'));
+      const u = new SpeechSynthesisUtterance(cleanSpeech(text));
+      u.lang = 'es-ES'; u.rate = 0.9;
+      const vs = speechSynthesis.getVoices();
+      const v = vs.find(x => /^es[-_]ES/i.test(x.lang)) || vs.find(x => /^es/i.test(x.lang));
+      if (v) u.voice = v;
+      if (btn) { btn.classList.add('speaking'); u.onend = u.onerror = () => btn.classList.remove('speaking'); }
+      speechSynthesis.speak(u);
+    } catch (e) { }
+  }
+  const autoSpeak = text => { if (S.settings.voice !== false) speak(text); };
+  const sayBtn = text => '<button class="say" data-act="say" data-t="' + esc(text) + '" aria-label="Escuchar">🔊</button>';
+  if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch (e) { } }
+
+  /* ================= Ayudas emergentes (una sola vez) ================= */
+  function tip(id, ico, text) {
+    if (!S || S.tips[id] || ui.tour) return;
+    S.tips[id] = true; save();
+    const old = $('#tipBox'); if (old) old.remove();
+    const d = document.createElement('div'); d.className = 'tip'; d.id = 'tipBox';
+    d.innerHTML = '<div class="tip-row"><div class="tip-ico">' + ico + '</div><div class="tip-txt">' + esc(text) + '</div>' + sayBtn(text) + '</div><div class="row mt8" style="justify-content:flex-end"><button class="btn small primary" data-act="tipOk">Entendido</button></div>';
+    document.body.appendChild(d);
+  }
+
+  /* ================= Ayuda de cada pantalla ================= */
+  const HELP = {
+    general: { title: '❓ Cómo se juega', steps: [
+      ['🃏', 'Cada coche tiene 10 cromos. Cada cromo enseña un trozo de la foto y un dato del coche.'],
+      ['📦', 'Abre sobres para conseguir cromos. Tienes un sobre gratis cada día.'],
+      ['🔥', 'Si entras días seguidos, sube tu racha y ganas premios extra.'],
+      ['🔧', 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.'],
+      ['🏅', 'Al completar un coche ganas una medalla. Puedes mejorarla a plata y a oro.'],
+      ['📚', 'Haz los deberes, toca «¡Hecho!» en Premios y papá o mamá lo aprueba. ¡Ganas sobres!'],
+      ['✅', 'Si no sabes qué hacer, mira el cuadro verde de Inicio.']] },
+    home: { title: '🏠 Inicio', steps: [
+      ['✅', 'El cuadro verde te dice qué hacer ahora. Toca su botón.'],
+      ['🎁', 'Arriba recoges tu sobre gratis de cada día.'],
+      ['📋', 'Las misiones son pequeños retos del día. Al terminarlas, toca el botón amarillo para cobrar.'],
+      ['📅', 'El objetivo semanal sube con cada tarea aprobada. Tiene 3 escalones con premio.'],
+      ['🏆', 'En la Vitrina ves tus medallas, insignias y trofeos.']] },
+    album: { title: '📒 Álbum', steps: [
+      ['🚗', 'Aquí están todos los coches, ordenados por marca.'],
+      ['🧩', 'Las casillas oscuras son cromos que te faltan. Las de foto son cromos que tienes.'],
+      ['❓', 'Los coches negros con interrogación aún no los has descubierto.'],
+      ['🔒', 'Los coches con candado son míticos: se abren al subir de nivel.'],
+      ['👆', 'Toca un coche para ver sus cromos y fabricar los que faltan.']] },
+    packs: { title: '📦 Sobres', steps: [
+      ['📦', 'Toca «Abrir» y después toca el sobre.'],
+      ['🃏', 'Toca cada carta para darle la vuelta. El color del borde dice lo rara que es.'],
+      ['🟢', 'NUEVO significa que es un cromo que no tenías.'],
+      ['🔧', 'Si es repetido, se convierte en créditos.'],
+      ['🛒', 'Con créditos puedes comprar sobres o un cromo sorpresa.']] },
+    quiz: { title: '🧩 Desafío', steps: [
+      ['👂', 'Toca 🔊 para escuchar la pregunta.'],
+      ['👆', 'Toca la respuesta que creas correcta.'],
+      ['🟢', 'Verde es correcto. Después verás los datos de verdad.'],
+      ['🥈', 'Acertar preguntas de un coche completo te da su medalla de plata.'],
+      ['📆', 'Puedes jugar 3 partidas cada día.']] },
+    rewards: { title: '🎯 Premios', steps: [
+      ['📚', 'Cuando termines una tarea, toca «¡Hecho!».'],
+      ['👨‍👩‍👦', 'Papá o mamá la aprueba con su PIN y recibes el premio.'],
+      ['📅', 'Cuantas más tareas a la semana, mejor premio semanal.'],
+      ['🎟️', 'Si te mandan un código, escríbelo en «Canjear código».'],
+      ['🏅', 'Los logros con botón amarillo están listos para cobrar.']] },
+    car: { title: '🚗 Ficha del coche', steps: [
+      ['🧩', 'Cada casilla del puzle es un cromo. Toca una casilla para ver qué dato tiene.'],
+      ['🛠️', 'El botón 🛠️ fabrica un cromo que te falta, pagando créditos.'],
+      ['🥉', 'Con los 10 cromos ganas la medalla de bronce y ves la ficha completa.'],
+      ['🥈', 'Plata: acierta 3 preguntas de este coche en el Desafío.'],
+      ['🥇', 'Oro: consigue 5 repetidos de este coche después de completarlo.']] }
+  };
+  const helpBtn = k => '<div class="screen-help"><button class="help-btn" data-act="help" data-k="' + k + '">❓ ¿Cómo funciona?</button></div>';
+  function helpSheet(k) {
+    const h = HELP[k] || HELP.general;
+    const all = h.steps.map(x => x[1]).join('. ');
+    openSheet(h.title, '<div class="row" style="margin-bottom:10px"><button class="btn small primary" data-act="say" data-t="' + esc(all) + '">🔊 Escuchar todo</button></div>' +
+      h.steps.map(x => '<div class="help-step"><div class="hs-n">' + x[0] + '</div><div class="hs-t grow">' + esc(x[1]) + '</div>' + sayBtn(x[1]) + '</div>').join('') +
+      '<button class="btn block mt16" data-act="startTour">🧭 Ver el tutorial guiado otra vez</button>');
+  }
+
+  /* ================= Tutorial guiado ================= */
+  const TOUR = [
+    { ico: '👋', t: '¡Hola! Te voy a enseñar a jugar, paso a paso. Si quieres, toca el altavoz para que te lo lea.', btn: 'Empezar' },
+    { tab: 'home', sel: '.bottomnav [data-tab="packs"]', ico: '📦', t: 'Aquí están tus sobres. Toca donde brilla.', tap: true },
+    { tab: 'packs', sel: '[data-act="openPack"][data-type="standard"]:not([disabled])', ico: '🎁', t: 'Tienes sobres de regalo. Toca «Abrir». Luego toca el sobre y gira las cartas.', tap: true, wait: 'reveal' },
+    { ico: '🃏', t: '¡Muy bien! Cada carta es un cromo: un trozo de la foto de un coche y un dato real de ese coche.' },
+    { sel: '.bottomnav [data-tab="album"]', ico: '📒', t: 'Ahora toca «Álbum» para ver tus coches.', tap: true },
+    { tab: 'album', sel: '#albumList .tile:not(.unknown):not(.locked)', ico: '🚗', t: 'Cada coche tiene 10 cromos. Cuando juntas los 10, el coche es tuyo y ganas una medalla.' },
+    { sel: '.top-right .pill', ico: '🔧', t: 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.' },
+    { sel: '.bottomnav [data-tab="rewards"]', ico: '🎯', t: 'Toca «Premios».', tap: true },
+    { tab: 'rewards', sel: '[data-act="request"]', ico: '📚', t: 'Cuando acabes los deberes, toca «¡Hecho!». Papá o mamá lo aprueba y ganas sobres.' },
+    { sel: '.bottomnav [data-tab="quiz"]', ico: '🧩', t: 'En «Desafío» respondes preguntas de coches y ganas créditos.' },
+    { sel: '.bottomnav [data-tab="home"]', ico: '🏠', t: 'Toca «Inicio».', tap: true },
+    { tab: 'home', sel: '#nextStep', ico: '✅', t: 'Aquí siempre verás qué hacer ahora. Si te pierdes, mira el cuadro verde.' },
+    { ico: '🏆', t: '¡Ya sabes jugar! Te regalo un sobre por terminar el tutorial.', btn: '¡Genial!', final: true }
+  ];
+  function startTour() {
+    closeSheet(); closeOverlay();
+    const t = $('#tipBox'); if (t) t.remove();
+    ui.tour = { i: 0 };
+    go('home');
+    setTimeout(drawTour, 150);
+  }
+  function endTour(finished) {
+    const L = $('#tourLayer'); if (L) L.remove();
+    closeOverlay();
+    try { speechSynthesis.cancel(); } catch (e) { }
+    const wasFirst = !S.tutorialDone;
+    ui.tour = null;
+    S.tutorialDone = true;
+    if (finished && wasFirst) { S.packs.standard++; GL.log(S, '🧭', 'Tutorial completado'); confetti(['#fbbf24', '#22d3ee', '#fff']); sfx('complete'); toast('🎁 +1 Sobre Garage por terminar el tutorial'); }
+    save(); render();
+  }
+  function tourNext() {
+    if (!ui.tour) return;
+    const st = TOUR[ui.tour.i];
+    if (st && st.final) { endTour(true); return; }
+    ui.tour.i++;
+    if (ui.tour.i >= TOUR.length) { endTour(true); return; }
+    drawTour();
+  }
+  function tourEvent(name) {
+    if (!ui.tour || !ui.tour.waiting || ui.tour.waiting !== name) return;
+    ui.tour.waiting = null;
+    ui.tour.i++;
+    setTimeout(drawTour, 300);
+  }
+  function drawTour() {
+    if (!ui.tour) return;
+    const st = TOUR[ui.tour.i]; if (!st) return endTour(true);
+    if (st.tab && tab !== st.tab) go(st.tab);
+    let L = $('#tourLayer');
+    if (!L) { L = document.createElement('div'); L.id = 'tourLayer'; L.className = 'tour'; document.body.appendChild(L); }
+    L.style.display = '';
+    let el = st.sel ? document.querySelector(st.sel) : null;
+    if (st.sel && !el) { ui.tour.i++; return drawTour(); }   // si no existe, saltar el paso
+    if (el && el.scrollIntoView && !el.closest('.bottomnav') && !el.closest('.topbar')) el.scrollIntoView({ block: 'center' });
+    setTimeout(() => {
+      const r = el ? el.getBoundingClientRect() : null;
+      const pad = 6;
+      const hole = r ? 'left:' + (r.left - pad) + 'px;top:' + (r.top - pad) + 'px;width:' + (r.width + pad * 2) + 'px;height:' + (r.height + pad * 2) + 'px'
+        : 'left:50%;top:40%;width:0;height:0';
+      const below = r ? (r.top + r.height / 2 < innerHeight / 2) : false;
+      const bubblePos = !r ? 'top:28%' : below ? 'top:' + Math.min(innerHeight - 260, r.bottom + 18) + 'px' : 'bottom:' + Math.max(12, innerHeight - r.top + 18) + 'px';
+      const n = ui.tour.i + 1;
+      L.innerHTML = '<div class="tour-block"></div><div class="tour-hole' + (r ? '' : ' none') + '" style="' + hole + '"></div>' +
+        (r && st.tap ? '<div class="tour-finger" style="left:' + (r.left + r.width / 2 - 8) + 'px;top:' + (r.top + r.height / 2 - 4) + 'px">👆</div>' : '') +
+        '<div class="tour-bubble" style="' + bubblePos + '"><div class="tb-row"><div class="tb-ico">' + st.ico + '</div><div class="tb-txt">' + esc(st.t) + '</div>' + sayBtn(st.t) + '</div>' +
+        '<div class="tb-act"><span class="tb-step">Paso ' + n + ' de ' + TOUR.length + '</span>' +
+        (st.final ? '' : '<button class="btn small ghost" data-act="tourSkip">Saltar</button>') +
+        (st.tap ? '' : '<button class="btn small gold" data-act="tourNext">' + (st.btn || 'Siguiente') + '</button>') + '</div></div>';
+      L.querySelector('.tour-block').onclick = ev => {
+        if (!st.tap || !r) return;
+        const x = ev.clientX, y = ev.clientY;
+        if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) {
+          if (st.wait) { ui.tour.waiting = st.wait; L.style.display = 'none'; el.click(); }
+          else { el.click(); ui.tour.i++; setTimeout(drawTour, 350); }
+        }
+      };
+      autoSpeak(st.t);
+    }, el ? 260 : 0);
+  }
+  window.addEventListener('resize', () => { if (ui.tour && !ui.tour.waiting) drawTour(); });
+
+  /* ================= Qué hago ahora ================= */
+  function nextStep() {
+    if (GL.dailyAvailable(S)) return { ico: '🎁', t: 'Recoge tu sobre gratis de hoy.', btn: 'Recoger', act: 'claimDaily' };
+    const packs = S.packs.standard + S.packs.epic + S.packs.legendary;
+    if (packs) return { ico: '📦', t: 'Tienes ' + packs + (packs > 1 ? ' sobres' : ' sobre') + ' sin abrir. ¡Ábrelos!', btn: 'Abrir', act: 'nsOpen' };
+    const mi = S.missions.ids.find(id => { const st = GL.missionProgress(S, id); return st.done && !st.claimed; });
+    if (mi) return { ico: '📋', t: 'Has terminado una misión. Cobra tu premio.', btn: 'Cobrar', act: 'claimMission', extra: 'data-id="' + mi + '"' };
+    const wk = GL.WEEKLY.find(w => S.weekly.tasks >= w.target && !S.weekly.claimed.includes(w.id));
+    if (wk || GL.pendingAchievements(S)) return { ico: '🏅', t: 'Tienes premios listos para cobrar.', btn: 'Ir a Premios', act: 'go', extra: 'data-tab="rewards"' };
+    const craftable = GL.availableCars(S).filter(c => { const n = GL.count(S, c.id); return n >= 7 && n < 10 && S.credits >= GL.craftCost(c); }).sort((a, b) => GL.count(S, b.id) - GL.count(S, a.id))[0];
+    if (craftable) return { ico: '🛠️', t: 'Tienes créditos para fabricar un cromo del ' + craftable.model + '.', btn: 'Ver coche', act: 'openCar', extra: 'data-car="' + craftable.id + '"' };
+    if (GL.quizAvailable(S) > 0) return { ico: '🧩', t: 'Juega el Desafío y gana créditos.', btn: 'Jugar', act: 'go', extra: 'data-tab="quiz"' };
+    if (S.requests.length) return { ico: '⏳', t: 'Pide a papá o mamá que apruebe tus tareas.', btn: 'Ver', act: 'go', extra: 'data-tab="rewards"' };
+    return { ico: '📚', t: 'Haz tus deberes y pide tu premio para conseguir más sobres.', btn: 'Premios', act: 'go', extra: 'data-tab="rewards"' };
+  }
+  function nextStepCard() {
+    const n = nextStep();
+    return '<div class="next-step" id="nextStep"><div class="ns-ico">' + n.ico + '</div><div class="grow"><div class="ns-lab">¿Qué hago ahora?</div><div class="ns-txt">' + esc(n.t) + '</div></div>' +
+      '<div class="row gap6" style="flex-direction:column">' + sayBtn('¿Qué hago ahora? ' + n.t) + '<button class="btn small green" data-act="' + n.act + '" ' + (n.extra || '') + '>' + n.btn + '</button></div></div>';
+  }
+
+  /* ================= Vitrina ================= */
+  const brandShort = b => ({ 'Mercedes-AMG': 'AMG', 'Mercedes-Benz': 'MB', 'Aston Martin': 'AM', 'Volkswagen': 'VW', 'Lamborghini': 'LAMBO', 'Koenigsegg': 'KOE', 'Chevrolet': 'CHEVY' }[b] || (b.length <= 5 ? b.toUpperCase() : b.slice(0, 3).toUpperCase()));
+  function vitrina() {
+    const medals = GL.CARS.filter(c => (S.medals[c.id] || 0) > 0);
+    const gold = medals.filter(c => S.medals[c.id] === 3).length, silver = medals.filter(c => S.medals[c.id] === 2).length;
+    let b = '<div class="card small">' + sayBtn('Vitrina. Aquí guardas tus medallas de coches, las insignias de marca y los trofeos.') + ' Aquí guardas todo lo que vas consiguiendo. Toca cualquier cosa para saber cómo se gana.</div>';
+    b += '<h2 class="sec">🏅 Medallas de coches<span class="count">' + medals.length + '/' + GL.CARS.length + ' · 🥈' + silver + ' · 🥇' + gold + '</span></h2><div class="medal-grid">' +
+      GL.CARS.slice().sort((x, y) => (S.medals[y.id] || 0) - (S.medals[x.id] || 0)).map(c => { const t = S.medals[c.id] || 0; return '<div class="medal ' + (t ? 't' + t : 'lock') + '" data-act="openCar" data-car="' + c.id + '"><img loading="lazy" src="' + carThumb(c.id) + '" alt=""><span class="md-ic">' + (t ? GL.MEDALS[t].icon : '🔒') + '</span><div class="md-nm">' + esc(c.model) + '</div></div>'; }).join('') + '</div>';
+    b += '<h2 class="sec">🛡️ Insignias de marca<span class="count">' + S.brands.length + '/' + GL.BRANDS.length + '</span></h2><div class="small muted" style="margin:-4px 2px 10px">Completa todos los coches de una marca para ganar su insignia.</div><div class="emblem-grid">' +
+      GL.BRANDS.slice().sort((x, y) => S.brands.includes(y) - S.brands.includes(x)).map(br => { const cars = GL.brandCars(br), done = cars.filter(c => GL.isComplete(S, c.id)).length, got = S.brands.includes(br);
+        return '<div class="emblem ' + (got ? '' : 'lock') + '" data-act="emblemInfo" data-b="' + esc(br) + '"><div class="em-c">' + esc(brandShort(br)) + '</div><div class="em-n">' + esc(br) + '</div><div class="em-p">' + done + '/' + cars.length + '</div></div>'; }).join('') + '</div>';
+    b += '<h2 class="sec">🏆 Trofeos<span class="count">' + S.achievements.length + '/' + GL.ACHIEVEMENTS.length + '</span></h2><div class="trophy-grid">' +
+      GL.ACHIEVEMENTS.slice().sort((x, y) => S.achievements.includes(y.id) - S.achievements.includes(x.id)).map(a => { const got = S.achievements.includes(a.id); return '<div class="trophy ' + (got ? '' : 'lock') + '" data-act="trophyInfo" data-id="' + a.id + '"><div class="tr-i">' + a.icon + '</div>' + esc(a.name) + '</div>'; }).join('') + '</div>';
+    openSheet('🏆 Mi Vitrina', b);
+  }
+
   /* ================= Hojas y overlays ================= */
   function openSheet(title, body, opts) {
     const w = $('#sheet');
@@ -139,7 +349,7 @@
     const isNew = S.newCars.includes(car.id) && !done;
     return '<div class="tile ' + cls + '" style="--rc:' + R[car.rarity].color + '" data-act="openCar" data-car="' + car.id + '">' +
       '<div class="ph"><img loading="lazy" src="' + carThumb(car.id) + '" alt="">' + (unlocked && cnt > 0 && !done ? puzzleCells(car.id, false) : '') +
-      '<span class="rdot">' + rarTag(car.rarity) + '</span>' + (isNew ? '<span class="newb">NUEVO</span>' : '') + '</div>' +
+      '<span class="rdot">' + rarTag(car.rarity) + '</span>' + (isNew ? '<span class="newb">NUEVO</span>' : '') + (done && S.medals[car.id] ? '<span class="medal-badge">' + GL.MEDALS[S.medals[car.id]].icon + '</span>' : '') + '</div>' +
       '<div class="info"><div class="br">' + esc(car.brand) + '</div><div class="nm">' + esc(car.model) + '</div>' +
       (unlocked ? '<div class="pr"><div class="progress' + (done ? ' gold' : '') + '"><span style="width:' + cnt * 10 + '%"></span></div>' + cnt + '/10</div>'
         : '<div class="pr">🔒 Nivel ' + car.unlock + '</div>') + '</div></div>';
@@ -196,7 +406,9 @@
   function homeView() {
     const avail = GL.dailyAvailable(S), tampered = GL.clockTampered(S);
     const packs = S.packs.standard + S.packs.epic + S.packs.legendary;
-    let h = '<div class="hero ' + (avail ? 'ready' : '') + '"><div class="big-pack">' + (avail ? '🎁' : '📦') + '</div>';
+    let h = helpBtn('home') + nextStepCard();
+    if (S.favorite && GL.isComplete(S, S.favorite)) { const fc = GL.carById[S.favorite]; h += '<div class="fav-banner" data-act="openCar" data-car="' + fc.id + '"><img src="' + carImg(fc.id) + '" alt=""><div class="fb-txt">⭐ Mi favorito: ' + esc(fc.brand + ' ' + fc.model) + ' ' + (GL.MEDALS[S.medals[fc.id] || 1].icon) + '</div></div>'; }
+    h += '<div class="hero ' + (avail ? 'ready' : '') + '"><div class="big-pack">' + (avail ? '🎁' : '📦') + '</div>';
     if (tampered) h += '<h3>⏰ Reloj cambiado</h3><p class="small muted" style="max-width:70%">La hora del móvil ha ido hacia atrás. El sobre diario volverá cuando la hora sea correcta.</p>';
     else if (avail) h += '<h3>¡Sobre diario listo!</h3><p class="small muted" style="max-width:65%">Recógelo cada día para mantener tu racha.</p><button class="btn gold mt8" data-act="claimDaily">🎁 Recoger sobre</button>';
     else h += '<h3>Próximo sobre diario</h3><div class="countdown" id="cd">' + fmtCountdown(msToMidnight()) + '</div>' + (packs ? '<button class="btn primary small mt8" data-act="go" data-tab="packs">Tienes ' + packs + ' sobre' + (packs > 1 ? 's' : '') + ' por abrir</button>' : '');
@@ -204,7 +416,8 @@
 
     const pieces = totalPieces(), cars = GL.CARS.filter(c => GL.isComplete(S, c.id)).length;
     h += '<div class="grid2 mt12"><div class="stat"><div class="v">' + pieces + '<span class="dim small">/' + GL.CARS.length * 10 + '</span></div><div class="l">Cromos</div></div>' +
-      '<div class="stat"><div class="v">' + cars + '<span class="dim small">/' + GL.CARS.length + '</span></div><div class="l">Coches completos</div></div></div>';
+      '<div class="stat"><div class="v">' + cars + '<span class="dim small">/' + GL.CARS.length + '</span></div><div class="l">Coches completos</div></div></div>' +
+      '<div class="row mt8 wrap gap6"><span class="rank-chip">' + GL.rank(S.level).icon + ' ' + GL.rank(S.level).name + '</span><span class="small muted">Nivel ' + S.level + ' · ' + S.xp + '/' + GL.xpForLevel(S.level) + ' puntos</span></div>';
 
     // próximo objetivo
     const cand = GL.availableCars(S).filter(c => !GL.isComplete(S, c.id) && GL.count(S, c.id) > 0).sort((a, b) => GL.count(S, b.id) - GL.count(S, a.id) || GL.craftCost(a) - GL.craftCost(b));
@@ -233,7 +446,10 @@
       h += '<h2 class="sec">✨ Descubiertos hace poco</h2><div class="album-grid">' + S.newCars.slice(0, 4).map(id => GL.carById[id]).filter(Boolean).map(tile).join('') + '</div>';
     }
     const ach = GL.pendingAchievements(S);
-    h += '<div class="card mt16 row" data-act="openAchievements" style="cursor:pointer"><div style="font-size:28px">🏅</div><div class="grow"><b>Vitrina de logros</b><div class="small muted">' + S.achievements.length + ' de ' + GL.ACHIEVEMENTS.length + ' conseguidos' + (ach ? ' · <span style="color:var(--gold)">' + ach + ' por reclamar</span>' : '') + '</div></div><span>›</span></div>';
+    const nMed = Object.values(S.medals).filter(Boolean).length;
+    h += '<div class="card mt16 row" data-act="vitrina" style="cursor:pointer"><div style="font-size:28px">🏆</div><div class="grow"><b>Mi Vitrina</b><div class="small muted">🏅 ' + nMed + ' medallas · 🛡️ ' + S.brands.length + ' insignias · 🏆 ' + S.achievements.length + ' trofeos' + (ach ? ' · <span style="color:var(--gold)">' + ach + ' por cobrar</span>' : '') + '</div></div><span>›</span></div>';
+    const cc = GL.availableCars(S).find(c => { const n = GL.count(S, c.id); return n > 0 && n < 10 && S.credits >= GL.craftCost(c); });
+    if (cc) setTimeout(() => tip('canCraft', '🛠️', 'Tienes créditos para fabricar un cromo. Entra en un coche del Álbum y toca el botón 🛠️ del cromo que te falta.'), 600);
 
     if (pieces > 20 && (!S.lastBackup || Date.now() - S.lastBackup > 14 * 864e5)) {
       h += '<div class="card mt12 row"><div style="font-size:26px">💾</div><div class="grow small">Haz una copia de seguridad de tu álbum por si cambias de móvil.</div><button class="btn small" data-act="exportSave">Guardar</button></div>';
@@ -253,7 +469,7 @@
   /* ================= ÁLBUM ================= */
   function albumView() {
     const total = GL.CARS.length * 10, have = totalPieces();
-    let h = '<div class="album-top"><div class="card"><div class="row between"><b class="display">MI ÁLBUM</b><span class="small muted">' + have + '/' + total + ' cromos · ' + Math.round(have / total * 100) + '%</span></div><div class="progress mt8"><span style="width:' + (have / total * 100) + '%"></span></div></div>' +
+    let h = '<div class="row between" style="margin:-4px 0 10px"><button class="help-btn" data-act="vitrina">🏆 Vitrina</button><button class="help-btn" data-act="help" data-k="album">❓ ¿Cómo funciona?</button></div>' + '<div class="album-top"><div class="card"><div class="row between"><b class="display">MI ÁLBUM</b><span class="small muted">' + have + '/' + total + ' cromos · ' + Math.round(have / total * 100) + '%</span></div><div class="progress mt8"><span style="width:' + (have / total * 100) + '%"></span></div></div>' +
       '<div class="search"><input id="albumSearch" type="search" placeholder="Buscar marca o modelo…" value="' + esc(ui.q) + '" autocomplete="off"></div>' +
       '<div class="chips">' + [['ALL', 'Todas']].concat(GL.RARITY_ORDER.map(r => [r, { COMMON: 'Comunes', RARE: 'Raras', EPIC: 'Épicas', LEGENDARY: 'Legendarias', MYTHIC: 'Míticas' }[r]])).map(([k, l]) => '<button class="chip ' + (ui.rarity === k ? 'on' : '') + '" data-act="fRar" data-v="' + k + '">' + l + '</button>').join('') + '</div>' +
       '<div class="chips" style="margin-top:-4px">' + [['ALL', 'Todo'], ['PROGRESS', 'Empezados'], ['DONE', 'Completos'], ['UNKNOWN', 'Por descubrir']].map(([k, l]) => '<button class="chip ' + (ui.status === k ? 'on' : '') + '" data-act="fSt" data-v="' + k + '">' + l + '</button>').join('') + '</div></div>';
@@ -295,7 +511,7 @@
     if (done) { S.stats.viewedCars++; save(); }
     let b = '<div class="car-hero ' + (done ? 'done' : '') + '">' + (unlocked ? '<img src="' + carImg(id) + '" alt="' + esc(car.model) + '" ' + (cnt === 0 ? 'style="filter:brightness(0)"' : '') + '>' : '<div style="height:100%;display:grid;place-items:center;font-size:44px">🔒</div>') + (unlocked && !done ? puzzleCells(id, true) : '') + '</div>';
     b += '<div class="row between mt12 wrap gap6"><div>' + rarTag(car.rarity) + ' <span class="tag" style="background:#ffffff12">' + GL.COUNTRIES[car.country].flag + ' ' + esc(car.brand) + '</span></div><span class="small muted">' + cnt + '/10 cromos</span></div>';
-    b += '<div class="car-title">' + esc(car.model) + '</div>';
+    b += '<div class="row between"><div class="car-title">' + esc(car.model) + '</div><button class="help-btn" data-act="help" data-k="car">❓</button></div>';
     if (!unlocked) {
       b += '<div class="card mt12 center">🔒 Este coche mítico se desbloquea al llegar al <b>nivel ' + car.unlock + '</b> de garaje.<div class="small muted mt8">Tú estás en el nivel ' + S.level + '. Sube de nivel consiguiendo cromos, completando misiones y tareas.</div></div>';
       openSheet(esc(car.brand), b); return;
@@ -307,8 +523,15 @@
         specBar('🚀 Velocidad máx.', GL.fmt.top(car), car.top / 450 * 100, 'gold') +
         specBar('⚖️ Peso (menos es mejor)', GL.fmt.weight(car), (2400 - car.weight) / (2400 - 1000) * 100) +
         '<div class="small muted mt8">Datos de fábrica aproximados. "≈" = estimación o dato no oficial.</div></div>';
+      const t = S.medals[id] || 1;
+      b += '<h2 class="sec">🏅 Medallas de este coche</h2>' + [1, 2, 3].map(k => {
+        const m = GL.MEDALS[k], on = t >= k;
+        const prog = k === 2 ? Math.min(m.need, S.carQuiz[id] || 0) + '/' + m.need : k === 3 ? Math.min(m.need, S.carDupes[id] || 0) + '/' + m.need : '';
+        return '<div class="medal-line ' + (on ? '' : 'off') + '"><div class="ml-i">' + m.icon + '</div><div class="grow"><b>' + m.name + (on ? ' ✅' : '') + '</b><div class="small muted">' + m.how + (m.reward ? ' · Premio: ' + GL.rewardText(m.reward) : '') + '</div></div>' + (on || !prog ? '' : '<span class="small">' + prog + '</span>') + '</div>';
+      }).join('') +
+      '<button class="btn block mt12 ' + (S.favorite === id ? 'gold' : '') + '" data-act="setFav" data-car="' + id + '">' + (S.favorite === id ? '⭐ Es tu coche favorito' : '☆ Poner como mi favorito') + '</button>';
     } else {
-      b += '<div class="small muted mt8">Toca una casilla vacía del puzle para ver qué dato esconde. Cada cromo nuevo revela un trozo de la foto y un dato del coche.</div>';
+      b += '<div class="small muted mt8">Toca una casilla vacía del puzle para ver qué dato esconde. Cada cromo nuevo revela un trozo de la foto y un dato del coche. Al completarlo ganas la medalla de bronce 🥉.</div>';
     }
     b += '<h2 class="sec">Cromos</h2><div class="piece-list">' + GL.PIECES.map(pc => {
       const on = GL.hasPiece(S, id, pc.n);
@@ -324,11 +547,12 @@
     openSheet(esc(car.brand), b, {
       onMount: w => { if (flashN) { const c = w.querySelector('.puzzle .cell[data-n="' + flashN + '"]'); if (c) c.classList.add('flash'); } }
     });
+    if (!done && cnt > 0) setTimeout(() => tip('carDetail', '🧩', 'Toca una casilla oscura del puzle para ver qué dato esconde. Si tienes créditos, puedes fabricar ese cromo con el botón 🛠️.'), 500);
   }
 
   /* ================= SOBRES, TIENDA Y TALLER ================= */
   function packsView() {
-    let h = '<h2 class="sec">📦 Mis sobres</h2>';
+    let h = helpBtn('packs') + '<h2 class="sec">📦 Mis sobres</h2>';
     ['standard', 'epic', 'legendary'].forEach(t => {
       const p = GL.PACKS[t], n = S.packs[t];
       h += '<div class="pack-row"><div class="pack-mini" style="--pc:' + p.color + '">' + p.icon + (n ? '<span class="n">' + n + '</span>' : '') + '</div><div class="grow"><b>' + p.name + '</b><div class="small muted">' + p.desc + '</div></div>' +
@@ -362,6 +586,7 @@
   function openPackFlow(type) {
     if (!S.packs[type]) return;
     const p = GL.PACKS[type];
+    if (ui.tour) setTimeout(() => autoSpeak('Toca el sobre para abrirlo.'), 300);
     openOverlay('<div class="open-stage"><div class="pack3d" id="pk" style="--pc:' + p.color + '" data-act="ripPack" data-type="' + type + '"><div class="pk-ico">' + p.icon + '</div><div class="pk-name">' + p.name.toUpperCase() + '</div><div class="pk-sub">5 cromos</div></div><div class="tap-hint">Toca el sobre para abrirlo</div><button class="btn ghost small mt16" data-act="closeOverlay">Ahora no</button></div>');
     sfx('tap');
   }
@@ -393,6 +618,7 @@
     });
     h += '</div><div class="open-summary" id="sum"><button class="btn" data-act="flipAll">Girar todas</button></div></div>';
     openOverlay(h);
+    if (ui.tour) autoSpeak('Toca cada carta para darle la vuelta.');
     if (best >= 3) setTimeout(() => { sfx('epic'); }, 300);
   }
   function flipCard(i) {
@@ -411,6 +637,7 @@
   function revealDone() {
     const { res, type } = reveal;
     const nNew = res.cards.filter(c => !c.dup).length, scrap = res.cards.reduce((a, c) => a + (c.scrap || 0), 0);
+    if (scrap && !ui.tour) setTimeout(() => tip('dupes', '🔧', 'Las cartas repetidas no se pierden: se convierten en créditos. Con los créditos fabricas los cromos que te faltan.'), 900);
     const sum = $('#sum'); if (!sum) return;
     sum.innerHTML = '<div class="card"><b>' + (nNew ? '¡' + nNew + ' cromo' + (nNew > 1 ? 's' : '') + ' nuevo' + (nNew > 1 ? 's' : '') + '!' : 'Todos repetidos… ¡el siguiente trae uno nuevo seguro!') + '</b>' + (scrap ? '<div class="small muted mt8">Repetidos convertidos en <b>+' + scrap + ' 🔧</b> para el Taller.</div>' : '') + '</div>' +
       '<div class="open-actions">' + (S.packs[type] > 0 ? '<button class="btn primary" data-act="nextPack" data-type="' + type + '">Abrir otro (' + S.packs[type] + ')</button>' : '') + '<button class="btn" data-act="endReveal">Continuar</button></div>';
@@ -420,19 +647,30 @@
     const type = reveal && reveal.type;
     reveal = null;
     closeOverlay();
-    playEvents(events, () => { render(); if (next && S.packs[type] > 0) openPackFlow(type); });
+    playEvents(events, () => {
+      render();
+      if (next && S.packs[type] > 0) openPackFlow(type);
+      else { tourEvent('reveal'); if (events.some(e => e.type === 'complete')) setTimeout(() => tip('firstMedal', '🏅', 'Has completado un coche y ganado su medalla de bronce. Mírala en tu Vitrina. Puedes mejorarla a plata y oro.'), 400); }
+    });
   }
 
   /* Cola de celebraciones: coche completado, subida de nivel */
   function playEvents(events, done) {
-    const q = (events || []).filter(e => e.type === 'complete' || e.type === 'levelup');
+    const q = (events || []).filter(e => ['complete', 'levelup', 'medal', 'brand'].includes(e.type));
     (function step() {
       const e = q.shift();
       if (!e) { closeOverlay(); if (done) done(); return; }
       if (e.type === 'complete') {
         const car = GL.carById[e.carId];
-        openOverlay('<div class="celebrate"><div class="big">¡COCHE COMPLETADO!</div><div class="car-hero done"><img src="' + carImg(car.id) + '" alt=""></div><div class="display" style="font-size:18px;font-weight:800">' + esc(car.brand) + ' ' + esc(car.model) + '</div><div class="mt8">' + rarTag(car.rarity) + '</div><div class="card mt16">Premio: <b>+' + e.credits + ' 🔧</b> · <b>+' + GL.TUNING.completeXp + ' XP</b>' + (GL.POSTERS.includes(car.id) ? '<br>🖼️ ¡Póster ilustrado desbloqueado!' : '') + '<br><span class="small muted">Ya puedes ver su ficha técnica completa.</span></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        openOverlay('<div class="celebrate"><div class="big">¡COCHE COMPLETADO!</div><div class="car-hero done"><img src="' + carImg(car.id) + '" alt=""></div><div class="display" style="font-size:18px;font-weight:800">' + esc(car.brand) + ' ' + esc(car.model) + '</div><div class="mt8">' + rarTag(car.rarity) + '</div><div class="card mt16">🥉 <b>¡Medalla de bronce!</b><br>Premio: <b>+' + e.credits + ' 🔧</b> · <b>+' + GL.TUNING.completeXp + ' puntos</b>' + (GL.POSTERS.includes(car.id) ? '<br>🖼️ ¡Póster ilustrado desbloqueado!' : '') + '<br><span class="small muted">Ya puedes ver su ficha técnica completa.</span></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
         sfx('complete'); confetti(['#fbbf24', '#fde68a', '#22d3ee', '#fff', R[car.rarity].color], 220); buzz([80, 60, 80, 60, 200]);
+      } else if (e.type === 'medal') {
+        const car = GL.carById[e.carId], m = GL.MEDALS[e.tier];
+        openOverlay('<div class="celebrate"><div style="font-size:90px;animation:popIn .6s">' + m.icon + '</div><div class="big">¡MEDALLA DE ' + m.name.toUpperCase() + '!</div><div class="display mt8" style="font-size:17px;font-weight:800">' + esc(car.brand + ' ' + car.model) + '</div><div class="card mt16">' + (e.tier === 2 ? 'Has acertado 3 preguntas de este coche. ¡Ya eres experto!' : 'Has conseguido 5 repetidos de este coche. ¡Edición oro!') + '<br>Premio: <b>' + GL.rewardText(e.reward) + '</b></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        sfx('complete'); confetti(e.tier === 3 ? ['#fbbf24', '#fde68a', '#fff'] : ['#cbd5e1', '#fff', '#22d3ee'], 180); buzz([80, 60, 120]);
+      } else if (e.type === 'brand') {
+        openOverlay('<div class="celebrate"><div class="emblem" style="border:0;background:none"><div class="em-c" style="width:120px;height:120px;font-size:28px">' + esc(brandShort(e.brand)) + '</div></div><div class="big">¡INSIGNIA DE ' + esc(e.brand.toUpperCase()) + '!</div><div class="card mt16">Has completado todos los coches de ' + esc(e.brand) + '.<br>Premio: <b>' + GL.rewardText(e.reward) + '</b></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        sfx('legend'); confetti(['#fbbf24', '#fde68a', '#fff'], 220); buzz([100, 60, 100, 60, 200]);
       } else {
         const un = (e.unlocked || []);
         openOverlay('<div class="celebrate"><div class="big">¡SUBES DE NIVEL!</div><div class="level-burst mt16">' + e.level + '</div><div class="card mt16">Premio: <b>' + GL.rewardText(e.reward) + '</b>' + (un.length ? '<br>🔓 Desbloqueado el coche mítico: <b>' + un.map(c => esc(c.brand + ' ' + c.model)).join(', ') + '</b>. ¡Ya puede salir en los sobres!' : '') + '</div><div class="open-actions"><button class="btn primary" data-act="evNext">Continuar</button></div></div>');
@@ -445,7 +683,8 @@
   /* ================= DESAFÍO ================= */
   function quizView() {
     const left = GL.quizAvailable(S);
-    return '<div class="card center"><div style="font-size:46px">🧩</div><div class="display" style="font-weight:800;font-size:18px">DESAFÍO MOTOR</div>' +
+    setTimeout(() => tip('quizFirst', '👂', 'En el Desafío puedes tocar el altavoz para escuchar cada pregunta. Acertar preguntas de tus coches completos te da medallas de plata.'), 500);
+    return helpBtn('quiz') + '<div class="card center"><div style="font-size:46px">🧩</div><div class="display" style="font-weight:800;font-size:18px">DESAFÍO MOTOR</div>' +
       '<p class="small muted">5 preguntas: duelos de datos ("¿cuál es más potente?") y adivinar el coche por un trozo de foto. Ganas <b>' + GL.TUNING.quizCreditPerHit + ' 🔧 por acierto</b> y <b>+' + GL.TUNING.quizPerfectBonus + ' 🔧</b> si haces pleno.</p>' +
       '<button class="btn primary block" data-act="startQuiz" ' + (left > 0 ? '' : 'disabled') + '>' + (left > 0 ? '¡Jugar! (' + left + ' partida' + (left > 1 ? 's' : '') + ' hoy)' : 'Vuelve mañana para jugar más') + '</button>' +
       '<div class="tiny muted mt8">Hay ' + GL.TUNING.quizPerDay + ' partidas al día. Las preguntas usan todos los coches del juego: ¡también aprendes de los que aún no tienes!</div></div>' +
@@ -453,25 +692,26 @@
   }
   function startQuiz() {
     const qs = GL.startQuiz(S); if (!qs) return;
-    save(); ui.quiz = { qs, i: 0, hits: 0, results: [], answered: false };
+    save(); ui.quiz = { qs, i: 0, hits: 0, results: [], answered: false, events: [] };
     render();
   }
   function quizGameView() {
     const z = ui.quiz;
     if (z.i >= z.qs.length) return quizResultView();
     const q = z.qs[z.i];
+    if (!z.answered && z.spoken !== z.i) { z.spoken = z.i; const qt = q.type === 'duel' ? GL.QUIZ_STATS.find(x => x.key === q.stat).q : '¿Qué coche es?'; setTimeout(() => autoSpeak(qt), 200); }
     let dots = ''; for (let k = 0; k < z.qs.length; k++) dots += '<i class="' + (k < z.i ? (z.results[k] ? 'ok' : 'ko') : k === z.i ? 'cur' : '') + '"></i>';
     let h = '<div class="dots">' + dots + '</div>';
     if (q.type === 'duel') {
       const st = GL.QUIZ_STATS.find(s => s.key === q.stat);
-      h += '<div class="quiz-q">' + st.q + '</div><div class="duel">' + q.options.map(id => {
+      h += '<div class="row" style="justify-content:center">' + sayBtn(st.q + ' ' + q.options.map(id => GL.carById[id].brand + ' ' + GL.carById[id].model).join(', o ')) + '<div class="quiz-q">' + st.q + '</div></div><div class="duel">' + q.options.map(id => {
         const c = GL.carById[id];
         let cls = ''; if (z.answered) cls = id === q.answer ? 'right' : (id === z.pick ? 'wrong' : '');
         return '<button class="opt ' + cls + '" data-act="answer" data-id="' + id + '"><img src="' + carThumb(id) + '" alt=""><div class="ol">' + esc(c.brand) + ' ' + esc(c.model) + '</div><div class="ov">' + (z.answered ? st.fmt(c) : '') + '</div></button>';
       }).join('') + '</div>';
     } else {
       const col = (q.region) % 5, row = Math.floor(q.region / 5);
-      h += '<div class="quiz-q">¿Qué coche es?</div><div class="guess-img ' + (z.answered ? 'reveal' : '') + '" style="background-image:url(' + carImg(q.carId) + ');background-position:' + (col * 25) + '% ' + (row * 100) + '%"></div>' +
+      h += '<div class="row" style="justify-content:center">' + sayBtn('¿Qué coche es? ' + q.options.map(id => GL.carById[id].brand + ' ' + GL.carById[id].model).join(', o ')) + '<div class="quiz-q">¿Qué coche es?</div></div><div class="guess-img ' + (z.answered ? 'reveal' : '') + '" style="background-image:url(' + carImg(q.carId) + ');background-position:' + (col * 25) + '% ' + (row * 100) + '%"></div>' +
         '<div class="guess-opts">' + q.options.map(id => { const c = GL.carById[id]; let cls = ''; if (z.answered) cls = id === q.answer ? 'right' : (id === z.pick ? 'wrong' : ''); return '<button class="btn ' + cls + '" data-act="answer" data-id="' + id + '">' + esc(c.brand) + '<br><span class="small">' + esc(c.model) + '</span></button>'; }).join('') + '</div>';
     }
     if (z.answered) h += '<div class="center mt16"><div class="display" style="font-weight:800;color:' + (z.results[z.i] ? 'var(--green)' : 'var(--red)') + '">' + (z.results[z.i] ? '¡CORRECTO!' : '¡CASI!') + '</div><button class="btn primary mt12" data-act="quizNext">' + (z.i + 1 >= z.qs.length ? 'Ver resultado' : 'Siguiente') + '</button></div>';
@@ -480,7 +720,7 @@
   function quizAnswer(id) {
     const z = ui.quiz; if (!z || z.answered) return;
     const q = z.qs[z.i]; const ok = id === q.answer;
-    z.answered = true; z.pick = id; z.results[z.i] = ok; if (ok) z.hits++;
+    z.answered = true; z.pick = id; z.results[z.i] = ok; if (ok) { z.hits++; GL.quizCorrect(S, q.answer, z.events); save(); }
     sfx(ok ? 'new' : 'error'); buzz(ok ? 25 : [40, 40, 40]);
     render();
   }
@@ -499,7 +739,8 @@
 
   /* ================= PREMIOS ================= */
   function rewardsView() {
-    let h = '<h2 class="sec">📚 Tareas con premio</h2><div class="small muted" style="margin:-4px 2px 10px">Cuando termines una tarea, pulsa <b>¡Hecho!</b> y pide a papá o mamá que la apruebe con su PIN.</div>';
+    setTimeout(() => tip('rewardsFirst', '📚', 'Cuando termines una tarea de verdad, toca «¡Hecho!». Después papá o mamá la aprueba con su PIN y recibes el premio.'), 500);
+    let h = helpBtn('rewards') + '<h2 class="sec">📚 Tareas con premio</h2><div class="small muted" style="margin:-4px 2px 10px">Cuando termines una tarea, pulsa <b>¡Hecho!</b> y pide a papá o mamá que la apruebe con su PIN.</div>';
     const today = GL.dayKey();
     P.tasks.forEach(t => {
       const pend = S.requests.some(r => r.taskId === t.id && GL.dayKey(r.ts) === today);
@@ -586,7 +827,7 @@
     const ap = approvalsToday();
     if (ap.n >= P.maxPerDay) { toast('Límite diario de aprobaciones alcanzado (' + P.maxPerDay + ').'); return; }
     S.requests = S.requests.filter(x => x.id !== reqId);
-    if (t) { ap.n++; const ev = GL.approveTask(S, t); save(); sfx('coin'); toast('✅ Aprobada: ' + t.name + ' → ' + GL.rewardText(t.reward)); if (ev.length) { closeSheet(); playEvents(ev, () => render()); return; } }
+    if (t) { ap.n++; const ev = GL.approveTask(S, t); save(); sfx('coin'); toast('✅ ¡Buen trabajo! ' + t.name + ' → ' + GL.rewardText(t.reward)); if (ev.length) { closeSheet(); playEvents(ev, () => render()); return; } }
     save();
     if (fromPanel) parentPanel(); else approveSheet();
     render();
@@ -649,6 +890,14 @@
       '<div class="row mt12"><button class="btn small" data-act="addTask">+ Añadir tarea</button><button class="btn small primary" data-act="saveTasks">Guardar cambios</button></div>' +
       '<div class="field"><label>Máximo de tareas aprobadas por día</label><input id="maxDay" type="number" min="1" max="20" value="' + P.maxPerDay + '"></div><button class="btn small mt8" data-act="saveMax">Guardar límite</button>';
 
+    b += '<h2 class="sec">💡 Consejos para que el premio ayude</h2><div class="card small"><ul class="tips-parent" style="padding-left:18px;margin:0">' +
+      '<li><b>Pactad juntos</b> qué tareas cuentan y qué se gana. Si él ayuda a elegir, se implica más.</li>' +
+      '<li><b>Aprueba pronto</b> y di algo concreto sobre el esfuerzo: «te has concentrado 45 minutos». Así el mensaje no es solo «toma un sobre».</li>' +
+      '<li>Con dislexia, la nota no siempre refleja el trabajo: <b>premia el esfuerzo y la constancia</b>, no solo el resultado.</li>' +
+      '<li><b>No quites cromos ni sobres como castigo.</b> Si un día no hay tarea, simplemente no hay premio.</li>' +
+      '<li>No premies lo que ya hace por gusto (por ejemplo, leer sobre coches): los premios pueden quitarle las ganas.</li>' +
+      '<li>Con el tiempo, pasa de premiar cada tarea a premiar <b>la semana</b> (los escalones semanales ya lo hacen).</li>' +
+      '<li>Activa la lectura en voz alta y el modo lectura fácil (menú ⚙️) y deja que también juegue por placer.</li></ul></div>';
     b += '<h2 class="sec">💾 Copias de seguridad</h2><div class="card"><div class="small muted">La partida se guarda en este móvil. Haz copia de vez en cuando (por ejemplo a tu Google Drive o WhatsApp). Restaurar una copia solo se puede desde aquí.</div><div class="row wrap mt12"><button class="btn small" data-act="exportSave">⬇️ Descargar</button><button class="btn small" data-act="shareSave">📤 Compartir</button><label class="btn small">⬆️ Restaurar<input type="file" accept=".json,application/json" id="importFile" hidden></label></div></div>';
 
     b += '<h2 class="sec">🧰 Herramientas</h2><div class="row wrap"><button class="btn small" data-act="pGrant" data-v="standard">+1 Garage</button><button class="btn small" data-act="pGrant" data-v="epic">+1 Nitro</button><button class="btn small" data-act="pGrant" data-v="legendary">+1 Apex</button><button class="btn small" data-act="pGrant" data-v="credits">+200 🔧</button></div>' +
@@ -698,7 +947,10 @@
   let installEvt = null;
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
   function menu() {
-    const b = '<div class="card row between"><span>🔊 Sonido</span><button class="btn small" data-act="toggle" data-k="sound">' + (S.settings.sound ? 'Activado' : 'Apagado') + '</button></div>' +
+    const b = '<div class="card row between"><span>🔤 Lectura fácil<br><span class="tiny muted">Letra más grande y separada</span></span><button class="btn small" data-act="toggle" data-k="easyRead">' + (S.settings.easyRead !== false ? 'Activada' : 'Apagada') + '</button></div>' +
+      '<div class="card row between"><span>🗣️ Leer en voz alta<br><span class="tiny muted">Tutorial y preguntas</span></span><button class="btn small" data-act="toggle" data-k="voice">' + (S.settings.voice !== false ? 'Activado' : 'Apagado') + '</button></div>' +
+      '<div class="card row between"><span>🧭 Tutorial guiado</span><button class="btn small primary" data-act="startTour">Empezar</button></div>' +
+      '<div class="card row between"><span>🔊 Sonido</span><button class="btn small" data-act="toggle" data-k="sound">' + (S.settings.sound ? 'Activado' : 'Apagado') + '</button></div>' +
       '<div class="card row between"><span>📳 Vibración</span><button class="btn small" data-act="toggle" data-k="haptics">' + (S.settings.haptics ? 'Activada' : 'Apagada') + '</button></div>' +
       '<div class="card row between"><span>💾 Copia de seguridad</span><span class="row gap6"><button class="btn small" data-act="exportSave">Descargar</button><button class="btn small" data-act="shareSave">Compartir</button></span></div>' +
       '<div class="card row between"><span>📲 Instalar como app</span><button class="btn small" data-act="install">Instalar</button></div>' +
@@ -770,7 +1022,7 @@
     startQuiz: () => startQuiz(),
     answer: d => quizAnswer(d.id),
     quizNext: () => quizNext(),
-    quizDone: () => { const ev = ui.quiz.reward.events; ui.quiz = null; playEvents(ev, () => render()); },
+    quizDone: () => { const ev = ui.quiz.events.concat(ui.quiz.reward.events); ui.quiz = null; playEvents(ev, () => render()); },
     request: d => {
       const t = P.tasks.find(x => x.id === d.id); if (!t) return;
       S.requests.push({ id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000), taskId: t.id, ts: Date.now() });
@@ -813,12 +1065,22 @@
     },
     exportSave: () => exportSave(),
     shareSave: () => shareSave(),
-    toggle: d => { S.settings[d.k] = !S.settings[d.k]; save(); menu(); },
+    toggle: d => { S.settings[d.k] = S.settings[d.k] === false; save(); applyEasy(); menu(); },
     install: async () => {
       if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (e) { } installEvt = null; }
       else toast('En Chrome: menú ⋮ → "Añadir a pantalla de inicio". En iPhone: Compartir → "Añadir a inicio".');
     },
-    help: () => help(),
+    help: d => helpSheet(d && d.k ? d.k : 'general'),
+    say: (d, el) => speak(d.t, el),
+    tipOk: () => { const t = $('#tipBox'); if (t) t.remove(); try { speechSynthesis.cancel(); } catch (e) { } },
+    startTour: () => startTour(),
+    tourNext: () => tourNext(),
+    tourSkip: () => endTour(false),
+    vitrina: () => vitrina(),
+    nsOpen: () => { const t = ['standard', 'epic', 'legendary'].find(x => S.packs[x] > 0); go('packs'); if (t) openPackFlow(t); },
+    setFav: d => { S.favorite = S.favorite === d.car ? null : d.car; save(); sfx('tap'); openCar(d.car); render(); },
+    emblemInfo: d => { const cars = GL.brandCars(d.b), done = cars.filter(c => GL.isComplete(S, c.id)).length; toast('🛡️ ' + d.b + ': ' + done + ' de ' + cars.length + ' coches completos. Premio: ' + GL.rewardText(GL.brandReward(d.b))); },
+    trophyInfo: d => { const a = GL.ACHIEVEMENTS.find(x => x.id === d.id); if (a) toast(a.icon + ' ' + a.name + ': ' + a.desc + '. ' + (S.achievements.includes(a.id) ? '¡Conseguido!' : 'Premio: ' + GL.rewardText(a.reward))); },
     credits: () => creditsSheet(),
     zoomPoster: d => openOverlay('<div class="open-stage" data-act="closeOverlay"><img src="img/posters/' + d.car + '.webp" alt="" style="width:100%;max-width:1200px;border-radius:12px"><div class="tap-hint">Toca para cerrar</div></div>')
   };
@@ -836,7 +1098,7 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'codeIn') redeemCode(e.target.value); });
   $('#btnMenu').onclick = () => { sfx('tap'); menu(); };
-  $('#levelChip').onclick = () => toast('⭐ Nivel ' + S.level + ' · ' + S.xp + '/' + GL.xpForLevel(S.level) + ' XP para el siguiente. ' + (GL.CARS.find(c => c.rarity === 'MYTHIC' && c.unlock > S.level) ? 'Próximo mítico en el nivel ' + GL.CARS.find(c => c.rarity === 'MYTHIC' && c.unlock > S.level).unlock + '.' : ''));
+  $('#levelChip').onclick = () => toast(GL.rank(S.level).icon + ' ' + GL.rank(S.level).name + ' · Nivel ' + S.level + ' · ' + S.xp + '/' + GL.xpForLevel(S.level) + ' XP para el siguiente. ' + (GL.CARS.find(c => c.rarity === 'MYTHIC' && c.unlock > S.level) ? 'Próximo mítico en el nivel ' + GL.CARS.find(c => c.rarity === 'MYTHIC' && c.unlock > S.level).unlock + '.' : ''));
   document.addEventListener('visibilitychange', () => { if (!document.hidden && S) { GL.touchClock(S); GL.ensureMissions(S); GL.ensureWeek(S); save(); if (tab === 'home') render(); } });
 
   /* ================= Arranque ================= */
@@ -846,10 +1108,12 @@
     } else if (firstRun) {
       openOverlay('<div class="celebrate"><div style="font-size:64px">🏎️</div><div class="big">GARAGE LEGENDS</div><div class="card mt16 small" style="max-width:480px;text-align:left">' +
         '🃏 Colecciona los <b>10 cromos</b> de cada coche para destapar su foto y sus datos.<br><br>📦 Tienes <b>' + GL.TUNING.welcomePacks + ' sobres de bienvenida</b> y uno gratis cada día.<br><br>📚 Gana más sobres haciendo deberes y estudiando (pestaña Premios).<br><br>👑 ' + GL.CARS.length + ' coches, de un Golf GTI a un Bugatti. ¿Podrás completarlos todos?</div>' +
-        '<div class="open-actions"><button class="btn gold" data-act="welcomeGo">¡Abrir mis sobres!</button></div></div>');
+        '<div class="open-actions"><button class="btn gold" data-act="welcomeGo">¡Empezar!</button></div></div>');
+    } else if (!S.tutorialDone) {
+      openOverlay('<div class="celebrate"><div style="font-size:60px">✨</div><div class="big">¡NOVEDADES!</div><div class="card mt16 small" style="text-align:left">🧭 Un <b>tutorial guiado</b> que te enseña a jugar paso a paso.<br><br>🔊 Puedes <b>escuchar</b> las explicaciones.<br><br>🏅 <b>Medallas</b> de bronce, plata y oro para cada coche, <b>insignias</b> de marca y una <b>vitrina</b>.</div><div class="open-actions"><button class="btn gold" data-act="welcomeGo">Ver el tutorial</button><button class="btn" data-act="tourSkip">Ahora no</button></div></div>');
     }
   }
-  A.welcomeGo = () => { closeOverlay(); go('packs'); openPackFlow('standard'); };
+  A.welcomeGo = () => { closeOverlay(); startTour(); };
 
   load();
   go('home');
