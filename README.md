@@ -37,8 +37,9 @@ Cuando cambies algo, sube la cifra de `VERSION` en `sw.js` y el `?v=` de `index.
 
 1. Abre ⚙️ → **Panel de padres** y crea un PIN (no hay ninguna clave por defecto).
 2. Revisa las **tareas y premios** y ajústalos a lo que hayáis pactado.
-3. Si quieres mandar premios desde tu móvil: abre la app en tu móvil, entra en el panel y escribe la misma **clave familiar** que aparece en el móvil de tu hijo. Los códigos que generes valen 3 días y solo se pueden usar una vez.
-4. Haz de vez en cuando una **copia de seguridad** (⚙️ → Copia de seguridad → Compartir, por ejemplo a tu Drive). Solo se puede restaurar una copia desde el panel de padres.
+3. Escribe tu **número de WhatsApp** en el panel de padres. Cuando tu hijo pulse «¡Hecho!», se le abrirá WhatsApp con un mensaje para ti que incluye un enlace. Al tocarlo en tu móvil, la app se abre lista para generar el código del premio, y se lo respondes por WhatsApp con un toque.
+4. Si quieres mandar premios desde tu móvil: abre la app en tu móvil, entra en el panel y escribe la misma **clave familiar** que aparece en el móvil de tu hijo. Los códigos que generes valen 3 días y solo se pueden usar una vez.
+5. Haz de vez en cuando una **copia de seguridad** (⚙️ → Copia de seguridad → Compartir, por ejemplo a tu Drive). Solo se puede restaurar una copia desde el panel de padres.
 
 > La seguridad es la propia de una app familiar sin servidor: impide las trampas fáciles (cambiar la hora del móvil, editar la copia o inventarse códigos), pero no está pensada para resistir a alguien con conocimientos técnicos.
 

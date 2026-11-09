@@ -165,7 +165,8 @@
       ['📆', 'Puedes jugar 3 partidas cada día.']] },
     rewards: { title: '🎯 Premios', steps: [
       ['📚', 'Cuando termines una tarea, toca «¡Hecho!».'],
-      ['👨‍👩‍👦', 'Papá o mamá la aprueba con su PIN y recibes el premio.'],
+      ['📲', 'Toca el botón verde para avisar por WhatsApp y después toca enviar.'],
+      ['👨‍👩‍👦', 'Papá o mamá la aprueba con su PIN o te manda un código.'],
       ['📅', 'Cuantas más tareas a la semana, mejor premio semanal.'],
       ['🎟️', 'Si te mandan un código, escríbelo en «Canjear código».'],
       ['🏅', 'Los logros con botón amarillo están listos para cobrar.']] },
@@ -195,7 +196,7 @@
     { tab: 'album', sel: '#albumList .tile:not(.unknown):not(.locked)', ico: '🚗', t: 'Cada coche tiene 10 cromos. Cuando juntas los 10, el coche es tuyo y ganas una medalla.' },
     { sel: '.top-right .pill', ico: '🔧', t: 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.' },
     { sel: '.bottomnav [data-tab="rewards"]', ico: '🎯', t: 'Toca «Premios».', tap: true },
-    { tab: 'rewards', sel: '[data-act="request"]', ico: '📚', t: 'Cuando acabes los deberes, toca «¡Hecho!». Papá o mamá lo aprueba y ganas sobres.' },
+    { tab: 'rewards', sel: '[data-act="request"]', ico: '📚', t: 'Cuando acabes los deberes, toca «¡Hecho!» y avisa a papá o mamá por WhatsApp. Cuando lo aprueben, ganas sobres.' },
     { sel: '.bottomnav [data-tab="quiz"]', ico: '🧩', t: 'En «Desafío» respondes preguntas de coches y ganas créditos.' },
     { sel: '.bottomnav [data-tab="home"]', ico: '🏠', t: 'Toca «Inicio».', tap: true },
     { tab: 'home', sel: '#nextStep', ico: '✅', t: 'Aquí siempre verás qué hacer ahora. Si te pierdes, mira el cuadro verde.' },
@@ -745,7 +746,7 @@
     P.tasks.forEach(t => {
       const pend = S.requests.some(r => r.taskId === t.id && GL.dayKey(r.ts) === today);
       h += '<div class="task"><div class="te">' + esc(t.emoji) + '</div><div class="grow"><b style="font-size:14px">' + esc(t.name) + '</b><div class="tr">' + GL.rewardText(t.reward) + ' · +' + (t.xp || 20) + ' XP</div></div>' +
-        (pend ? '<span class="tiny muted">⏳ Pendiente</span>' : '<button class="btn small green" data-act="request" data-id="' + esc(t.id) + '">¡Hecho!</button>') + '</div>';
+        (pend ? (P.parentPhone ? '<button class="btn small" data-act="notify" data-id="' + esc(t.id) + '">📲 Avisar</button>' : '<span class="tiny muted">⏳ Pendiente</span>') : '<button class="btn small green" data-act="request" data-id="' + esc(t.id) + '">¡Hecho!</button>') + '</div>';
     });
     if (S.requests.length) h += '<div class="card mt12 row"><div style="font-size:24px">⏳</div><div class="grow small"><b>' + S.requests.length + ' tarea' + (S.requests.length > 1 ? 's' : '') + ' esperando aprobación</b><div class="muted">Papá/mamá: pulsa para aprobar con tu PIN.</div></div><button class="btn primary small" data-act="approveFlow">Aprobar</button></div>';
 
@@ -789,7 +790,7 @@
       pinPad('Crear PIN parental', 'Papá/mamá: elige un PIN de 4 a 6 números. Sirve para aprobar tareas y proteger las copias de seguridad.', p1 => {
         pinPad('Repite el PIN', 'Vuelve a escribir el mismo PIN.', p2 => {
           if (p1 !== p2) { sfx('error'); toast('Los PIN no coinciden. Inténtalo otra vez.'); closeSheet(); return; }
-          P.salt = randomKey(12); P.pinHash = hashPin(p1, P.salt); if (!P.familyKey) P.familyKey = randomKey(10); saveP();
+          P.salt = randomKey(12); P.pinHash = hashPin(p1, P.salt); if (!P.familyKey && !P.isParentDevice) P.familyKey = randomKey(10); saveP();
           toast('🔐 PIN creado'); closeSheet(); cb();
         });
       });
@@ -833,6 +834,52 @@
     render();
   }
 
+  /* ================= Avisos por WhatsApp ================= */
+  const APP_URL = () => location.origin + location.pathname.replace(/index\.html$/, '');
+  function rewardIdx(reward) {
+    if (!reward) return 0;
+    if (reward.pack) {
+      const i = CODE_REWARDS.findIndex(r => r.pack === reward.pack && (r.n || 1) === (reward.n || 1));
+      return i >= 0 ? i : CODE_REWARDS.findIndex(r => r.pack === reward.pack);
+    }
+    let best = 4, diff = 1e9;
+    CODE_REWARDS.forEach((r, i) => { if (r.credits && Math.abs(r.credits - reward.credits) < diff) { diff = Math.abs(r.credits - reward.credits); best = i; } });
+    return best;
+  }
+  function cleanPhone(v) {
+    let d = String(v || '').replace(/[^0-9]/g, '').replace(/^00/, '');
+    if (d.length === 9 && /^[6789]/.test(d)) d = '34' + d;   // número español sin prefijo
+    return d;
+  }
+  function waOpen(phone, text) {
+    const url = 'https://wa.me/' + (phone || '') + '?text=' + encodeURIComponent(text);
+    const w = window.open(url, '_blank');
+    if (!w) location.href = url;
+  }
+  function requestMessage(t) {
+    const link = APP_URL() + '#aprobar=' + rewardIdx(t.reward) + '~' + encodeURIComponent(t.name).replace(/[()'!*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    return '📚 ¡He terminado: ' + t.name + '! ¿Me lo apruebas?\n\nPremio: ' + GL.rewardText(t.reward).replace(/🔧/g, 'créditos') + '\n\n👉 Para aprobarlo toca aquí: ' + link;
+  }
+  function notifySheet(t) {
+    const b = '<div class="center"><div style="font-size:54px">📲</div><div class="tip-txt mt8" style="font-size:18px">Avisa a papá o mamá de que has terminado.</div>' + sayBtn('Avisa a papá o mamá de que has terminado. Toca el botón verde y después toca enviar en WhatsApp.') +
+      '<div class="card mt12 small" style="text-align:left">1️⃣ Toca el botón verde.<br>2️⃣ Se abre WhatsApp con el mensaje ya escrito.<br>3️⃣ Toca <b>enviar</b> ➤.</div>' +
+      '<button class="btn green block mt16" style="font-size:17px;padding:16px" data-act="sendWa" data-id="' + esc(t.id) + '">💬 Avisar por WhatsApp</button><button class="btn ghost block mt8" data-act="closeSheet">Ahora no</button></div>';
+    openSheet('Avisar', b);
+  }
+
+  /* El padre/madre toca el enlace del WhatsApp en SU móvil: se abre la app lista para aprobar */
+  function approveLinkFromHash() {
+    const m = /#aprobar=(\d+)~?(.*)$/.exec(location.hash || '');
+    if (!m) return null;
+    history.replaceState(null, '', location.pathname + location.search);
+    let name = ''; try { name = decodeURIComponent(m[2] || ''); } catch (e) { }
+    return { idx: Math.min(CODE_REWARDS.length - 1, +m[1] || 0), name: name.slice(0, 60) };
+  }
+  function handleApproveLink(link) {
+    P.isParentDevice = true; saveP();
+    requirePin(() => parentPanel({ approve: link }));
+  }
+
   /* ================= Códigos a distancia ================= */
   const CODE_REWARDS = [{ pack: 'standard', n: 1 }, { pack: 'standard', n: 2 }, { pack: 'epic', n: 1 }, { pack: 'legendary', n: 1 }, { credits: 50 }, { credits: 100 }, { credits: 200 }];
   const A32 = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -857,6 +904,8 @@
     if (dn > today + 1 || today - dn > 2) return toast('Este código ha caducado (dura 3 días).');
     S.redeemed.push(code);
     const reward = CODE_REWARDS[idx];
+    const ri = S.requests.findIndex(r => { const t = P.tasks.find(x => x.id === r.taskId); return t && rewardIdx(t.reward) === idx; });
+    if (ri >= 0) S.requests.splice(ri, 1);
     const ev = GL.approveTask(S, { name: 'Premio a distancia', emoji: '🎟️', reward, xp: 30 }, true);
     save(); sfx('coin'); confetti(['#34d399', '#fbbf24', '#fff'], 100);
     toast('🎟️ ¡Código canjeado! ' + GL.rewardText(reward));
@@ -871,13 +920,22 @@
   }
   const parseReward = v => { const p = v.split(':'); return p[0] === 'p' ? { pack: p[1], n: Number(p[2]) } : { credits: Number(p[1]) }; };
 
-  function parentPanel() {
+  function parentPanel(opts) {
+    opts = (opts && typeof opts === 'object' && !opts.target) ? opts : {};
     const ap = approvalsToday();
     const recent = S.history.filter(x => x.text.includes('→')).slice(0, 8);
     let b = '';
     if (S.requests.length) b += '<div class="card row"><div class="grow"><b>⏳ ' + S.requests.length + ' tarea(s) pendientes</b></div><button class="btn primary small" data-act="approveSheetP">Revisar</button></div>';
     b += '<h2 class="sec">⚡ Dar un premio ahora</h2><div class="small muted">Aprobadas hoy: ' + ap.n + '/' + P.maxPerDay + '</div>' + P.tasks.map(t => '<div class="task"><div class="te">' + esc(t.emoji) + '</div><div class="grow"><b style="font-size:14px">' + esc(t.name) + '</b><div class="tr">' + GL.rewardText(t.reward) + '</div></div><button class="btn small green" data-act="grantTask" data-id="' + esc(t.id) + '">Dar</button></div>').join('');
 
+    if (opts.approve) {
+      b = '<div class="card" style="border-color:var(--green)"><b>✅ Aprobar: ' + esc(opts.approve.name || 'tarea') + '</b><div class="small muted mt8">Premio: ' + GL.rewardText(CODE_REWARDS[opts.approve.idx]) + '. Genera el código y respóndele por WhatsApp. Él lo escribe en <b>Premios → Canjear código</b>.</div>' +
+        (P.familyKey ? '<button class="btn primary block mt12" data-act="genCode">🎟️ Generar código</button>' : '<div class="small mt12" style="color:var(--gold)">⚠️ Antes escribe abajo la <b>clave familiar</b> que aparece en el panel de padres del móvil de tu hijo.</div>') + '<div id="codeOut"></div></div>' + b;
+    }
+    b += '<h2 class="sec">📲 Avisos por WhatsApp</h2><div class="card"><div class="small muted">Cuando tu hijo pulse «¡Hecho!», se le abrirá WhatsApp con un mensaje para ti. El mensaje trae un enlace: al tocarlo en tu móvil se abre la app lista para aprobar.</div>' +
+      '<div class="field"><label>Tu número de WhatsApp (con prefijo, por ejemplo 34 600 000 000)</label><div class="row"><input id="parentPhone" type="tel" inputmode="tel" value="' + esc(P.parentPhone ? '+' + P.parentPhone : '') + '" placeholder="+34 600 000 000"><button class="btn small primary" data-act="savePhone">Guardar</button></div></div>' +
+      '<button class="btn small mt8" data-act="testWa">Enviar mensaje de prueba</button>' +
+      '<div class="small muted mt12">Para aprobar desde tu móvil: abre la app en tu móvil, crea tu PIN y escribe la clave familiar <b>' + esc(P.familyKey || '(se crea con el PIN)') + '</b>.</div></div>';
     b += '<h2 class="sec">📲 Código a distancia</h2><div class="card"><div class="small muted">Genera un código (válido 3 días, un solo uso) y mándaselo por WhatsApp. Para generarlo desde <b>tu</b> móvil, abre la app en tu móvil, entra en este panel y pon la misma clave familiar.</div>' +
       '<div class="field"><label>Premio</label><select id="codeReward">' + CODE_REWARDS.map((r, i) => '<option value="' + i + '">' + GL.rewardText(r) + '</option>').join('') + '</select></div><button class="btn primary block mt12" data-act="genCode">Generar código</button><div id="codeOut"></div>' +
       '<div class="field"><label>Clave familiar (igual en los dos móviles)</label><div class="row"><input id="famKey" value="' + esc(P.familyKey || '') + '" autocapitalize="characters"><button class="btn small" data-act="saveFamKey">Guardar</button></div></div></div>';
@@ -903,7 +961,10 @@
     b += '<h2 class="sec">🧰 Herramientas</h2><div class="row wrap"><button class="btn small" data-act="pGrant" data-v="standard">+1 Garage</button><button class="btn small" data-act="pGrant" data-v="epic">+1 Nitro</button><button class="btn small" data-act="pGrant" data-v="legendary">+1 Apex</button><button class="btn small" data-act="pGrant" data-v="credits">+200 🔧</button></div>' +
       '<div class="row wrap mt12"><button class="btn small" data-act="changePin">Cambiar PIN</button><button class="btn small danger" data-act="resetAll">Reiniciar álbum</button></div>';
     openSheet('👨‍👩‍👦 Panel de padres', b, {
-      onMount: w => { const f = w.querySelector('#importFile'); if (f) f.onchange = importSave; }
+      onMount: w => {
+        const f = w.querySelector('#importFile'); if (f) f.onchange = importSave;
+        if (opts.approve) { const sel = w.querySelector('#codeReward'); if (sel) sel.value = String(opts.approve.idx); if (!P.familyKey) { const k = w.querySelector('#famKey'); if (k) { k.scrollIntoView({ block: 'center' }); k.focus(); } } }
+      }
     });
   }
   function readTaskEdits() {
@@ -1026,8 +1087,14 @@
     request: d => {
       const t = P.tasks.find(x => x.id === d.id); if (!t) return;
       S.requests.push({ id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000), taskId: t.id, ts: Date.now() });
-      save(); sfx('tap'); toast('⏳ Enviado. Pide a papá o mamá que lo apruebe.'); render();
+      save(); sfx('tap'); render();
+      if (P.parentPhone) notifySheet(t); else toast('⏳ Apuntado. Pide a papá o mamá que lo apruebe.');
     },
+    notify: d => { const t = P.tasks.find(x => x.id === d.id); if (t) notifySheet(t); },
+    sendWa: d => { const t = P.tasks.find(x => x.id === d.id); if (!t) return; closeSheet(); waOpen(P.parentPhone, requestMessage(t)); toast('📲 ¡Aviso preparado! Ahora toca enviar en WhatsApp.'); },
+    replyWa: d => waOpen('', '🎟️ ¡Aprobado! Tu código de Garage Legends es: ' + d.code + '\n\nEscríbelo en Premios → Canjear código.'),
+    savePhone: () => { const v = cleanPhone($('#parentPhone').value); if (v && v.length < 10) return toast('Escribe el número con prefijo, por ejemplo 34 600 000 000.'); P.parentPhone = v || null; saveP(); toast(v ? '📲 WhatsApp guardado: +' + v : 'Avisos por WhatsApp desactivados'); },
+    testWa: () => { if (!P.parentPhone) return toast('Guarda primero el número.'); waOpen(P.parentPhone, '✅ Prueba de Garage Legends: los avisos de tareas llegarán a este WhatsApp.'); },
     approveFlow: () => approveFlow(),
     approve: d => approve(d.id),
     reject: d => { S.requests = S.requests.filter(x => x.id !== d.id); save(); approveSheet(); render(); },
@@ -1044,7 +1111,8 @@
     genCode: () => {
       if (!P.familyKey) return toast('Guarda primero una clave familiar.');
       const code = makeCode(+$('#codeReward').value);
-      $('#codeOut').innerHTML = '<div class="codebox mt12">' + code + '</div><div class="row mt8"><button class="btn small block" data-act="shareCode" data-code="' + code + '">📤 Enviar</button></div>';
+      const outs = document.querySelectorAll('#codeOut'); if (outs.length > 1) outs[1].innerHTML = '';
+      $('#codeOut').innerHTML = '<div class="codebox mt12">' + code + '</div><div class="row mt8"><button class="btn green block" data-act="replyWa" data-code="' + code + '">💬 Responder por WhatsApp</button></div><div class="row mt8"><button class="btn small block" data-act="shareCode" data-code="' + code + '">📤 Otra app</button></div>';
     },
     shareCode: async d => {
       const text = '🎟️ Código de Garage Legends: ' + d.code + ' (canjéalo en Premios)';
@@ -1103,6 +1171,7 @@
 
   /* ================= Arranque ================= */
   function welcome() {
+    if (P.isParentDevice && !firstRun) return;
     if (migrated) {
       openOverlay('<div class="celebrate"><div class="big">GARAGE LEGENDS 2.0</div><div class="card mt16" style="max-width:480px">🔄 Tu álbum anterior se ha pasado a la nueva versión: conservas tus cromos y tus sobres. ¡Ahora hay <b>' + GL.CARS.length + ' coches</b>, misiones, desafío, logros y mucho más!</div><div class="open-actions"><button class="btn gold" data-act="closeOverlay">¡A jugar!</button></div></div>');
     } else if (firstRun) {
@@ -1117,7 +1186,9 @@
 
   load();
   go('home');
-  welcome();
+  const approveLink = approveLinkFromHash();
+  if (approveLink) handleApproveLink(approveLink); else welcome();
+  window.addEventListener('hashchange', () => { const l = approveLinkFromHash(); if (l) handleApproveLink(l); });
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => { });
 })(window.GL);
