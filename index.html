@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Garage Legends</title>
+  <meta name="description" content="Álbum de cromos digital de coches: abre sobres, completa coches y gana premios estudiando.">
+  <meta name="theme-color" content="#070a12">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/styles.css?v=2.0.0">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <button class="level-chip" id="levelChip" aria-label="Nivel de garaje">
+        <span class="level-num" id="hudLevel">1</span>
+        <span class="level-bar"><span id="hudXpBar"></span></span>
+      </button>
+      <div class="brand-title"><span class="bt-g">GARAGE </span><b>LEGENDS</b></div>
+      <div class="top-right">
+        <span class="pill" title="Créditos de taller">🔧 <b id="hudCredits">0</b></span>
+        <button class="icon-btn" id="btnMenu" aria-label="Menú">⚙️</button>
+      </div>
+    </header>
+
+    <main id="screen" class="screen"></main>
+
+    <nav class="bottomnav" id="bottomnav">
+      <button data-tab="home"><span class="ni">🏠</span><span>Inicio</span></button>
+      <button data-tab="album"><span class="ni">📒</span><span>Álbum</span></button>
+      <button data-tab="packs"><span class="ni">📦</span><span>Sobres</span><i class="badge" id="badgePacks"></i></button>
+      <button data-tab="quiz"><span class="ni">🧩</span><span>Desafío</span><i class="badge" id="badgeQuiz"></i></button>
+      <button data-tab="rewards"><span class="ni">🎯</span><span>Premios</span><i class="badge" id="badgeRewards"></i></button>
+    </nav>
+  </div>
+
+  <div id="overlay" class="overlay hidden" aria-modal="true" role="dialog"></div>
+  <div id="sheet" class="sheet-wrap hidden" aria-modal="true" role="dialog"></div>
+  <div id="toast" class="toast hidden"></div>
+  <canvas id="fx" class="fx"></canvas>
+
+  <script src="js/data.js?v=2.0.0"></script>
+  <script src="js/engine.js?v=2.0.0"></script>
+  <script src="js/credits.js?v=2.0.0"></script>
+  <script src="js/sha256.js?v=2.0.0"></script>
+  <script src="js/ui.js?v=2.0.0"></script>
+</body>
+</html>
