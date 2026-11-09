@@ -2,7 +2,7 @@
 
 Álbum de cromos digital de coches para el móvil. Es una web instalable (PWA): funciona sin conexión y no necesita tienda de aplicaciones ni servidor propio.
 
-**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.3.0
+**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.3.1
 
 ## Qué incluye
 
