@@ -1,6 +1,8 @@
-# Garage Legends 2.0
+# Garage Legends
 
 Álbum de cromos digital de coches para el móvil. Es una web instalable (PWA): funciona sin conexión y no necesita tienda de aplicaciones ni servidor propio.
+
+**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.3.0
 
 ## Qué incluye
 
@@ -61,3 +63,9 @@ Cuando cambies algo, sube la cifra de `VERSION` en `sw.js` y el `?v=` de `index.
 | `img/posters/` | Infografías ilustradas (creadas con IA, decorativas) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | App instalable y funcionamiento sin conexión |
 | `legacy/` | Versión 1 original. Si se jugaba en la misma dirección web, la 2.0 recupera la partida sola; si no, exporta la copia .json en la v1 y restáurala desde el panel de padres |
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Rafael Karino Arillo ([rkarillo-tech](https://github.com/rkarillo-tech)).
+Puedes usarlo, copiarlo, modificarlo y distribuirlo libremente, manteniendo el aviso de autoría.
+Las fotos de los coches (Wikimedia Commons, licencias Creative Commons) y la tipografía Orbitron (SIL OFL 1.1) tienen su propia licencia: ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -316,3 +316,9 @@ h2.sec .count { margin-left: auto; white-space: nowrap; font-family: var(--body)
 @media (min-width: 700px) { .piece-list { grid-template-columns: 1fr 1fr; } .album-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
 .celebrate > * { max-width: 100%; } .celebrate .card { width: 100%; max-width: 480px; }
 @media (max-width: 400px) { .bt-g { display: none; } .brand-title { font-size: 14px; } }
+
+/* ===== Pie de página y licencia ===== */
+.app-footer { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.6; padding: 26px 12px 4px; }
+.app-footer a, .link-inline { color: #9fd8ee; text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.lic-text { white-space: pre-wrap; font-size: 11.5px; line-height: 1.45; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; color: var(--muted); }
+details > summary { cursor: pointer; color: #9fd8ee; font-weight: 700; margin: 10px 0 8px; }
