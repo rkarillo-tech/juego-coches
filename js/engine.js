@@ -67,7 +67,14 @@
       history: [],                // {ts, icon, text}
       redeemed: [],               // códigos usados
       quiz: { day: null, plays: 0 },
-      settings: { sound: true, haptics: true },
+      settings: { sound: true, haptics: true, easyRead: true, voice: true },
+      carQuiz: {},                // carId -> aciertos en el Desafío sobre ese coche
+      carDupes: {},               // carId -> repetidos conseguidos tras completarlo
+      medals: {},                 // carId -> 1 bronce, 2 plata, 3 oro
+      brands: [],                 // marcas con insignia conseguida
+      favorite: null,             // coche favorito (se ve en Inicio)
+      tutorialDone: false,
+      tips: {},                   // ayudas emergentes ya vistas
       lastBackup: null,
       newCars: []                 // coches descubiertos recientemente (para destacar)
     };
@@ -180,6 +187,7 @@
         s.credits += c.scrap;
         s.stats.dupes++;
         GL.addXp(s, T.dupeXp, events);
+        if (GL.isComplete(s, c.carId)) { s.carDupes[c.carId] = (s.carDupes[c.carId] || 0) + 1; GL.checkMedal(s, c.carId, events); }
       } else {
         anyNew = true;
         (s.pieces[c.carId] = s.pieces[c.carId] || []).push(c.n);
@@ -206,8 +214,68 @@
     s.credits += credits;
     GL.log(s, '🏆', car.brand + ' ' + car.model + ' completado');
     if (events) events.push({ type: 'complete', carId: car.id, credits });
+    s.medals[car.id] = Math.max(1, s.medals[car.id] || 0);
     GL.addXp(s, T.completeXp, events);
+    GL.checkMedal(s, car.id, events);
+    GL.checkBrand(s, car.brand, events);
   };
+
+  /* ---------- Medallas de coche (bronce, plata, oro) ---------- */
+  GL.MEDALS = [
+    null,
+    { tier: 1, icon: '🥉', name: 'Bronce', how: 'Completa los 10 cromos', reward: null },
+    { tier: 2, icon: '🥈', name: 'Plata', how: 'Acierta 3 preguntas sobre este coche en el Desafío', need: 3, reward: { credits: 80 } },
+    { tier: 3, icon: '🥇', name: 'Oro', how: 'Consigue 5 cromos repetidos de este coche después de completarlo', need: 5, reward: { pack: 'standard', n: 1 } }
+  ];
+  GL.medalTier = function (s, carId) {
+    if (!GL.isComplete(s, carId)) return 0;
+    let t = 1;
+    if ((s.carQuiz[carId] || 0) >= GL.MEDALS[2].need) {
+      t = 2;
+      if ((s.carDupes[carId] || 0) >= GL.MEDALS[3].need) t = 3;
+    }
+    return t;
+  };
+  GL.checkMedal = function (s, carId, events) {
+    const t = GL.medalTier(s, carId), had = s.medals[carId] || 0;
+    if (t <= had) return;
+    s.medals[carId] = t;
+    for (let k = Math.max(2, had + 1); k <= t; k++) {
+      const m = GL.MEDALS[k];
+      GL.grant(s, m.reward);
+      const car = GL.carById[carId];
+      GL.log(s, m.icon, 'Medalla de ' + m.name.toLowerCase() + ': ' + car.brand + ' ' + car.model);
+      if (events) events.push({ type: 'medal', carId, tier: k, reward: m.reward });
+    }
+  };
+  GL.quizCorrect = function (s, carId, events) {
+    s.carQuiz[carId] = (s.carQuiz[carId] || 0) + 1;
+    GL.checkMedal(s, carId, events);
+  };
+
+  /* ---------- Insignias de marca ---------- */
+  GL.BRANDS = [...new Set(GL.CARS.map(c => c.brand))].sort((a, b) => a.localeCompare(b, 'es'));
+  GL.brandCars = b => GL.CARS.filter(c => c.brand === b);
+  GL.brandReward = function (b) {
+    const n = GL.brandCars(b).length;
+    return n >= 4 ? { pack: 'legendary', n: 1 } : n >= 2 ? { pack: 'epic', n: 1 } : { credits: 120 };
+  };
+  GL.checkBrand = function (s, brand, events) {
+    if (s.brands.includes(brand)) return;
+    if (!GL.brandCars(brand).every(c => GL.isComplete(s, c.id))) return;
+    s.brands.push(brand);
+    const reward = GL.brandReward(brand);
+    GL.grant(s, reward);
+    GL.log(s, '🛡️', 'Insignia de marca: ' + brand);
+    if (events) events.push({ type: 'brand', brand, reward });
+  };
+
+  /* ---------- Rangos de piloto ---------- */
+  GL.RANKS = [
+    { from: 1, icon: '🔩', name: 'Aprendiz' }, { from: 3, icon: '🔧', name: 'Mecánico' }, { from: 6, icon: '🏎️', name: 'Piloto' },
+    { from: 10, icon: '🏁', name: 'Piloto Pro' }, { from: 15, icon: '🏆', name: 'Campeón' }, { from: 20, icon: '👑', name: 'Leyenda' }
+  ];
+  GL.rank = level => GL.RANKS.filter(r => level >= r.from).pop();
 
   /* ---------- Taller ---------- */
   GL.craftCost = car => R[car.rarity].craft;
@@ -364,11 +432,6 @@
     { id: 'hp1000',    icon: '💥', name: 'Club de los 1.000 CV',  desc: 'Completa 3 coches de 1.000 CV o más',    test: s => countBy(s, c => c.hp >= 1000) >= 3, reward: { pack: 'legendary', n: 1 } },
     { id: 'volt',      icon: '🔋', name: 'Voltaje',               desc: 'Completa 3 eléctricos o híbridos',       test: s => countBy(s, c => c.tags.includes('electric') || c.tags.includes('hybrid')) >= 3, reward: { pack: 'epic', n: 1 } },
     { id: 'classic',   icon: '🕰️', name: 'Clásico eterno',        desc: 'Completa un clásico mítico',             test: s => countBy(s, c => c.tags.includes('classic')) >= 1, reward: { pack: 'epic', n: 1 } },
-    { id: 'brandBMW',  icon: '🔵', name: 'Familia BMW',           desc: 'Completa todos los BMW',                 test: s => brandDone(s, 'BMW'), reward: { pack: 'epic', n: 1 } },
-    { id: 'brandAMG',  icon: '⭐', name: 'Familia AMG',           desc: 'Completa todos los Mercedes-AMG',        test: s => brandDone(s, 'Mercedes-AMG'), reward: { pack: 'epic', n: 1 } },
-    { id: 'brandFER',  icon: '🐎', name: 'Cavallino',             desc: 'Completa todos los Ferrari',             test: s => brandDone(s, 'Ferrari'), reward: { pack: 'legendary', n: 1 } },
-    { id: 'brandLAM',  icon: '🐂', name: 'Toro bravo',            desc: 'Completa todos los Lamborghini',         test: s => brandDone(s, 'Lamborghini'), reward: { pack: 'legendary', n: 1 } },
-    { id: 'brandPOR',  icon: '🛡️', name: 'Escudo de Stuttgart',   desc: 'Completa todos los Porsche',             test: s => brandDone(s, 'Porsche'), reward: { pack: 'epic', n: 1 } },
     { id: 'streak7',   icon: '📆', name: 'Constancia',            desc: 'Racha de 7 días seguidos',               test: s => s.daily.best >= 7,  reward: { credits: 150 } },
     { id: 'streak30',  icon: '🗓️', name: 'Imparable',             desc: 'Racha de 30 días seguidos',              test: s => s.daily.best >= 30, reward: { pack: 'legendary', n: 1 } },
     { id: 'study10',   icon: '📚', name: 'Buen estudiante',       desc: '10 tareas aprobadas',                    test: s => s.stats.tasksApproved >= 10, reward: { pack: 'epic', n: 1 } },
@@ -496,7 +559,13 @@
     if (Array.isArray(raw.history)) s.history = raw.history.slice(0, 150).filter(h => h && typeof h.text === 'string').map(h => ({ ts: num(h.ts, 0), icon: String(h.icon || '•').slice(0, 4), text: h.text.slice(0, 160) }));
     if (raw.clock) s.clock.maxSeen = Math.max(num(raw.clock.maxSeen, 0), s.clock.maxSeen);
     if (raw.weekly && typeof raw.weekly.week === 'string') { s.weekly.week = raw.weekly.week.slice(0, 10); s.weekly.tasks = num(raw.weekly.tasks, 0, 1000); s.weekly.claimed = idList(raw.weekly.claimed, x => GL.WEEKLY.some(w => w.id === x)); }
-    if (raw.settings) { s.settings.sound = raw.settings.sound !== false; s.settings.haptics = raw.settings.haptics !== false; }
+    if (raw.settings) { ['sound', 'haptics', 'easyRead', 'voice'].forEach(k => { s.settings[k] = raw.settings[k] !== false; }); }
+    const numMap = (o, max) => { const r = {}; if (o && typeof o === 'object') for (const id in o) if (GL.carById[id]) r[id] = num(o[id], 0, max); return r; };
+    s.carQuiz = numMap(raw.carQuiz, 10000); s.carDupes = numMap(raw.carDupes, 10000); s.medals = numMap(raw.medals, 3);
+    s.brands = idList(raw.brands, x => GL.BRANDS.includes(x));
+    s.favorite = (typeof raw.favorite === 'string' && GL.carById[raw.favorite]) ? raw.favorite : null;
+    s.tutorialDone = !!raw.tutorialDone;
+    if (raw.tips && typeof raw.tips === 'object') for (const k in raw.tips) if (k.length < 30) s.tips[k] = true;
     return s;
   };
 

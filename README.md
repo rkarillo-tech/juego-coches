@@ -10,6 +10,8 @@
 - **Taller:** los repetidos se convierten en créditos para fabricar el cromo exacto que falta, conseguir un cromo sorpresa o comprar sobres.
 - **Sobre diario con racha** (bonus a los 3 días, cada 7 y a los 30), **niveles de garaje** (los coches míticos se desbloquean subiendo de nivel), **misiones diarias**, **30 logros** y el **Desafío** (preguntas sobre coches, 3 partidas al día).
 - **Premios por estudiar:** el niño pulsa "¡Hecho!" en una tarea y el padre o la madre la aprueba con su PIN. Hay objetivo semanal por escalones (3, 6 y 10 tareas) y **códigos a distancia** para mandar por WhatsApp.
+- **Pensado para dislexia:** modo lectura fácil (letra más grande, más espacio entre letras, palabras y líneas, sin mayúsculas continuas), botón 🔊 para escuchar cualquier explicación, tutorial guiado de 13 pasos que señala dónde tocar, ayuda «¿Cómo funciona?» en cada pantalla, ayudas que aparecen la primera vez que se usa cada cosa y un cuadro verde «¿Qué hago ahora?».
+- **Coleccionables:** cada coche completo da una medalla de bronce que se mejora a plata (acertar 3 preguntas de ese coche en el Desafío) y a oro (5 repetidos de ese coche). Además hay insignias por completar marcas, trofeos, rangos de piloto (de Aprendiz a Leyenda), coche favorito en Inicio y una Vitrina para verlo todo.
 - **Panel de padres:** tareas y premios editables, límite diario de aprobaciones, resumen, copias de seguridad y herramientas.
 
 ## Probarlo en el ordenador
