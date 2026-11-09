@@ -168,7 +168,7 @@
       ['📲', 'Toca el botón verde para avisar por WhatsApp y después toca enviar.'],
       ['👨‍👩‍👦', 'Tus padres la aprueban con su PIN o te mandan un código.'],
       ['📅', 'Cuantas más tareas a la semana, mejor premio semanal.'],
-      ['🎟️', 'Si te mandan un código, escríbelo en «Canjear código».'],
+      ['🎟️', 'Si te mandan un enlace con tu premio, solo tienes que tocarlo. Si te mandan un código, escríbelo en «Canjear código».'],
       ['🏅', 'Los logros con botón amarillo están listos para cobrar.']] },
     car: { title: '🚗 Ficha del coche', steps: [
       ['🧩', 'Cada casilla del puzle es un cromo. Toca una casilla para ver qué dato tiene.'],
@@ -876,7 +876,7 @@
     if (!w) location.href = url;
   }
   function requestMessage(t) {
-    const link = APP_URL() + '#aprobar=' + rewardIdx(t.reward) + '~' + encodeURIComponent(t.name).replace(/[()'!*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    const link = APP_URL() + '#aprobar=' + rewardIdx(t.reward) + '&k=' + (P.familyKey || '') + '&t=' + encodeURIComponent(t.name).replace(/[()'!*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
     return '📚 ¡He terminado: ' + t.name + '! ¿Me lo apruebas?\n\nPremio: ' + GL.rewardText(t.reward).replace(/🔧/g, 'créditos') + '\n\n👉 Para aprobarlo toca aquí: ' + link;
   }
   function notifySheet(t) {
@@ -888,15 +888,30 @@
 
   /* El padre/madre toca el enlace del WhatsApp en SU móvil: se abre la app lista para aprobar */
   function approveLinkFromHash() {
-    const m = /#aprobar=(\d+)~?(.*)$/.exec(location.hash || '');
-    if (!m) return null;
+    const h = location.hash || '';
+    let m = /^#aprobar=(\d+)&k=([0-9A-Za-z]*)&t=(.*)$/.exec(h), idx, key = '', rawName = '';
+    if (m) { idx = m[1]; key = m[2].toUpperCase(); rawName = m[3]; }
+    else { m = /^#aprobar=(\d+)~?(.*)$/.exec(h); if (!m) return null; idx = m[1]; rawName = m[2]; }   // avisos antiguos, sin clave
     history.replaceState(null, '', location.pathname + location.search);
-    let name = ''; try { name = decodeURIComponent(m[2] || ''); } catch (e) { }
-    return { idx: Math.min(CODE_REWARDS.length - 1, +m[1] || 0), name: name.slice(0, 60) };
+    let name = ''; try { name = decodeURIComponent(rawName || ''); } catch (e) { }
+    return { idx: Math.min(CODE_REWARDS.length - 1, +idx || 0), name: name.slice(0, 60), key: key.length >= 6 ? key : '' };
   }
   function handleApproveLink(link) {
-    P.isParentDevice = true; saveP();
+    P.isParentDevice = true;
+    if (link.key && link.key !== P.familyKey) { P.familyKey = link.key; link.keyUpdated = true; }   // la clave del móvil del hijo manda
+    saveP();
     requirePin(() => parentPanel({ approve: link }));
+  }
+  /* El hijo toca el enlace de la respuesta: el premio se canjea solo */
+  function redeemLinkFromHash() {
+    const m = /^#canjear=([0-9A-Za-z-]{12,20})$/.exec(location.hash || '');
+    if (!m) return null;
+    history.replaceState(null, '', location.pathname + location.search);
+    return m[1];
+  }
+  function handleRedeemLink(code) {
+    closeOverlay(); go('rewards');
+    setTimeout(() => redeemCode(code), 350);
   }
 
   /* ================= Códigos a distancia ================= */
@@ -912,12 +927,15 @@
     return 'GL-' + full.slice(0, 4) + '-' + full.slice(4, 8) + '-' + full.slice(8, 12);
   }
   function redeemCode(raw) {
-    const code = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/^GL/, '');
+    const txt = String(raw || '').toUpperCase();
+    // vale el código suelto, el mensaje entero pegado o el enlace de canje
+    const found = /CANJEAR=([0-9A-Z]{12})/.exec(txt) || /GL[\s-]*([0-9A-Z]{4})[\s-]*([0-9A-Z]{4})[\s-]*([0-9A-Z]{4})/.exec(txt);
+    const code = found ? (found[2] ? found[1] + found[2] + found[3] : found[1]) : txt.replace(/[^0-9A-Z]/g, '').replace(/^GL/, '');
     if (code.length !== 12) return toast('El código debe tener 12 caracteres (GL-XXXX-XXXX-XXXX).');
     if (!P.familyKey) return toast('Este móvil aún no tiene clave familiar. Tus padres deben crear el PIN primero.');
     if (S.redeemed.includes(code)) return toast('Este código ya se canjeó.');
     const payload = code.slice(0, 7), sig = code.slice(7);
-    if (signCode(payload) !== sig) { sfx('error'); return toast('Código no válido. Revisa que esté bien escrito.'); }
+    if (signCode(payload) !== sig) { sfx('error'); return toast('Código no válido para este móvil. Pide a tus padres que lo generen desde el enlace de tu último aviso (botón 📲 Avisar).'); }
     const idx = A32.indexOf(payload[0]), dn = unb32(payload.slice(1, 4)), today = dayNum(Date.now());
     if (idx < 0 || idx >= CODE_REWARDS.length) return toast('Código no válido.');
     if (dn > today + 1 || today - dn > 2) return toast('Este código ha caducado (dura 3 días).');
@@ -948,7 +966,8 @@
     b += '<h2 class="sec">⚡ Dar un premio ahora</h2><div class="small muted">Aprobadas hoy: ' + ap.n + '/' + P.maxPerDay + '</div>' + P.tasks.map(t => '<div class="task"><div class="te">' + esc(t.emoji) + '</div><div class="grow"><b style="font-size:14px">' + esc(t.name) + '</b><div class="tr">' + GL.rewardText(t.reward) + '</div></div><button class="btn small green" data-act="grantTask" data-id="' + esc(t.id) + '">Dar</button></div>').join('');
 
     if (opts.approve) {
-      b = '<div class="card" style="border-color:var(--green)"><b>✅ Aprobar: ' + esc(opts.approve.name || 'tarea') + '</b><div class="small muted mt8">Premio: ' + GL.rewardText(CODE_REWARDS[opts.approve.idx]) + '. Genera el código y respóndele por WhatsApp. Él lo escribe en <b>Premios → Canjear código</b>.</div>' +
+      b = '<div class="card" style="border-color:var(--green)"><b>✅ Aprobar: ' + esc(opts.approve.name || 'tarea') + '</b><div class="small muted mt8">Premio: ' + GL.rewardText(CODE_REWARDS[opts.approve.idx]) + '. Genera el código y envíale el enlace por WhatsApp: al tocarlo, el premio se canjea solo.</div>' +
+        (opts.approve.key ? '<div class="tiny muted mt8">🔑 Clave familiar recibida en el aviso' + (opts.approve.keyUpdated ? ' (actualizada en este móvil)' : '') + '.</div>' : '<div class="tiny mt8" style="color:var(--gold)">⚠️ Este aviso es de una versión anterior y no trae la clave familiar. Si el código no le funciona, pídele que te reenvíe el aviso con el botón 📲 Avisar.</div>') +
         (P.familyKey ? '<button class="btn primary block mt12" data-act="genCode">🎟️ Generar código</button>' : '<div class="small mt12" style="color:var(--gold)">⚠️ Antes escribe abajo la <b>clave familiar</b> que aparece en el panel de padres del móvil de tu hijo.</div>') + '<div id="codeOut"></div></div>' + b;
     }
     b += '<h2 class="sec">📲 Avisos por WhatsApp</h2><div class="card"><div class="small muted">Cuando tu hijo pulse «¡Hecho!», se le abrirá WhatsApp con un mensaje para ti. El mensaje trae un enlace: al tocarlo en tu móvil se abre la app lista para aprobar.</div>' +
@@ -1112,7 +1131,11 @@
     },
     notify: d => { const t = P.tasks.find(x => x.id === d.id); if (t) notifySheet(t); },
     sendWa: d => { const t = P.tasks.find(x => x.id === d.id); if (!t) return; closeSheet(); waOpen(P.parentPhone, requestMessage(t)); toast('📲 ¡Aviso preparado! Ahora toca enviar en WhatsApp.'); },
-    replyWa: d => waOpen('', '🎟️ ¡Aprobado! Tu código de Garage Legends es: ' + d.code + '\n\nEscríbelo en Premios → Canjear código.'),
+    replyWa: d => waOpen('', '🎟️ ¡Premio aprobado! Toca el enlace para recibirlo:\n' + APP_URL() + '#canjear=' + d.code.replace(/^GL-?/, '').replace(/-/g, '')),
+    copyCode: async d => {
+      try { await navigator.clipboard.writeText(d.code); toast('📋 Código copiado: pégalo en WhatsApp como mensaje aparte'); }
+      catch (e) { toast('Mantén pulsado el código para copiarlo.'); }
+    },
     savePhone: () => { const v = cleanPhone($('#parentPhone').value); if (v && v.length < 10) return toast('Escribe el número con prefijo, por ejemplo 34 600 000 000.'); P.parentPhone = v || null; saveP(); toast(v ? '📲 WhatsApp guardado: +' + v : 'Avisos por WhatsApp desactivados'); },
     testWa: () => { if (!P.parentPhone) return toast('Guarda primero el número.'); waOpen(P.parentPhone, '✅ Prueba de Garage Legends: los avisos de tareas llegarán a este WhatsApp.'); },
     approveFlow: () => approveFlow(),
@@ -1132,7 +1155,7 @@
       if (!P.familyKey) return toast('Guarda primero una clave familiar.');
       const code = makeCode(+$('#codeReward').value);
       const outs = document.querySelectorAll('#codeOut'); if (outs.length > 1) outs[1].innerHTML = '';
-      $('#codeOut').innerHTML = '<div class="codebox mt12">' + code + '</div><div class="row mt8"><button class="btn green block" data-act="replyWa" data-code="' + code + '">💬 Responder por WhatsApp</button></div><div class="row mt8"><button class="btn small block" data-act="shareCode" data-code="' + code + '">📤 Otra app</button></div>';
+      $('#codeOut').innerHTML = '<div class="codebox mt12">' + code + '</div><div class="row mt8"><button class="btn green block" data-act="replyWa" data-code="' + code + '">💬 Enviar enlace por WhatsApp</button></div><div class="small muted mt8">Tu hijo solo tiene que tocar el enlace: el premio se canjea solo.</div><div class="row mt8 gap6"><button class="btn small grow" data-act="copyCode" data-code="' + code + '">📋 Copiar solo el código</button><button class="btn small grow" data-act="shareCode" data-code="' + code + '">📤 Otra app</button></div>';
     },
     shareCode: async d => {
       const text = '🎟️ Código de Garage Legends: ' + d.code + ' (canjéalo en Premios)';
@@ -1207,9 +1230,9 @@
 
   load();
   go('home');
-  const approveLink = approveLinkFromHash();
-  if (approveLink) handleApproveLink(approveLink); else welcome();
-  window.addEventListener('hashchange', () => { const l = approveLinkFromHash(); if (l) handleApproveLink(l); });
+  const approveLink = approveLinkFromHash(), redeemLink = !approveLink && redeemLinkFromHash();
+  if (approveLink) handleApproveLink(approveLink); else if (redeemLink) handleRedeemLink(redeemLink); else welcome();
+  window.addEventListener('hashchange', () => { const l = approveLinkFromHash(); if (l) return handleApproveLink(l); const r = redeemLinkFromHash(); if (r) handleRedeemLink(r); });
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => { });
 })(window.GL);
