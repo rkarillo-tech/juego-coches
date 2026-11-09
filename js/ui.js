@@ -387,8 +387,27 @@
     else if (tab === 'packs') scr.innerHTML = packsView();
     else if (tab === 'quiz') scr.innerHTML = ui.quiz ? quizGameView() : quizView();
     else if (tab === 'rewards') scr.innerHTML = rewardsView();
+    scr.insertAdjacentHTML('beforeend', footerHtml());
     if (tab === 'home') startCountdown();
     hud();
+  }
+  function footerHtml() {
+    return '<footer class="app-footer">Garage Legends ' + GL.VERSION + ' · © 2026 Rafael Karino Arillo · <button class="link-inline" data-act="license" type="button">Licencia y créditos</button> · <a href="' + GL.REPO + '" target="_blank" rel="noopener noreferrer">código fuente</a></footer>';
+  }
+  const MIT_TEXT = 'MIT License\n\nCopyright (c) 2026 Rafael Karino Arillo (rkarillo-tech)\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the "Software"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.';
+  function licenseSheet() {
+    openSheet('📜 Licencia y créditos',
+      '<p><b>Garage Legends ' + GL.VERSION + '</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>' +
+      '<p class="small">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>' +
+      '<details><summary>Ver el texto de la licencia</summary><pre class="lic-text">' + esc(MIT_TEXT) + '</pre></details>' +
+      '<h2 class="sec">Créditos</h2><ul class="small" style="padding-left:18px;line-height:1.6">' +
+      '<li>Juego, motor de sobres, interfaz, tutorial y panel de padres: código propio con licencia MIT.</li>' +
+      '<li><b>Fotos de los coches:</b> Wikimedia Commons, de varios autores, con licencias Creative Commons (la mayoría CC BY-SA 4.0). No están cubiertas por la licencia MIT. <button class="link-inline" data-act="credits" type="button">Ver autores y licencias</button>.</li>' +
+      '<li><b>Tipografía Orbitron</b> © Matt McInerney, con licencia SIL Open Font License 1.1.</li>' +
+      '<li><b>Pósters ilustrados:</b> creados por la familia con IA; son decorativos.</li>' +
+      '<li>Las marcas y los nombres de modelos pertenecen a sus propietarios; este proyecto no está afiliado a ninguno de ellos. Los datos técnicos son aproximados.</li></ul>' +
+      '<p class="small muted">La partida se guarda solo en este móvil: la aplicación no envía datos a ningún servidor. Los avisos por WhatsApp los envías tú desde tu propia aplicación de WhatsApp.</p>' +
+      '<p class="small"><a href="' + GL.REPO + '" target="_blank" rel="noopener noreferrer">Código fuente y descargas en GitHub</a></p>');
   }
 
   /* ================= INICIO ================= */
@@ -441,7 +460,7 @@
     });
 
     // semana
-    h += '<h2 class="sec">📅 Objetivo de estudio semanal<span class="count">' + S.weekly.tasks + ' tareas</span></h2>' + weeklyLadder();
+    h += '<h2 class="sec">📅 Objetivo de estudio semanal<span class="count">' + S.weekly.tasks + (S.weekly.tasks === 1 ? ' tarea' : ' tareas') + '</span></h2>' + weeklyLadder();
 
     if (S.newCars.length) {
       h += '<h2 class="sec">✨ Descubiertos hace poco</h2><div class="album-grid">' + S.newCars.slice(0, 4).map(id => GL.carById[id]).filter(Boolean).map(tile).join('') + '</div>';
@@ -750,7 +769,7 @@
     });
     if (S.requests.length) h += '<div class="card mt12 row"><div style="font-size:24px">⏳</div><div class="grow small"><b>' + S.requests.length + ' tarea' + (S.requests.length > 1 ? 's' : '') + ' esperando aprobación</b><div class="muted">Para aprobarlas hace falta el PIN de los padres.</div></div><button class="btn primary small" data-act="approveFlow">Aprobar</button></div>';
 
-    h += '<h2 class="sec">📅 Esta semana<span class="count">' + S.weekly.tasks + ' tareas aprobadas</span></h2>' + weeklyLadder();
+    h += '<h2 class="sec">📅 Esta semana<span class="count">' + S.weekly.tasks + (S.weekly.tasks === 1 ? ' tarea aprobada' : ' tareas aprobadas') + '</span></h2>' + weeklyLadder();
 
     h += '<h2 class="sec">🎟️ Canjear código</h2><div class="card"><div class="small muted">Si tus padres te envían un código desde su móvil, escríbelo aquí.</div><div class="row mt8"><input id="codeIn" placeholder="GL-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"><button class="btn primary" data-act="redeem">Canjear</button></div></div>';
 
@@ -1018,7 +1037,8 @@
       '<div class="card row between"><span>❓ Cómo se juega</span><button class="btn small" data-act="help">Ver</button></div>' +
       '<div class="card row between"><span>📷 Créditos de las fotos</span><button class="btn small" data-act="credits">Ver</button></div>' +
       '<div class="card row between"><span>👨‍👩‍👦 Panel de padres</span><button class="btn small primary" data-act="parentAccess">Entrar</button></div>' +
-      '<div class="tiny dim center mt16">Garage Legends 2.0 · ' + GL.CARS.length + ' coches · ' + GL.CARS.length * 10 + ' cromos</div>';
+      '<div class="card row between"><span>📜 Licencia y créditos</span><button class="btn small" data-act="license">Ver</button></div>' +
+      '<div class="tiny dim center mt16">Garage Legends ' + GL.VERSION + ' · © 2026 Rafael Karino Arillo · Licencia MIT<br>' + GL.CARS.length + ' coches · ' + GL.CARS.length * 10 + ' cromos</div>';
     openSheet('⚙️ Menú', b);
   }
   function help() {
@@ -1150,6 +1170,7 @@
     emblemInfo: d => { const cars = GL.brandCars(d.b), done = cars.filter(c => GL.isComplete(S, c.id)).length; toast('🛡️ ' + d.b + ': ' + done + ' de ' + cars.length + ' coches completos. Premio: ' + GL.rewardText(GL.brandReward(d.b))); },
     trophyInfo: d => { const a = GL.ACHIEVEMENTS.find(x => x.id === d.id); if (a) toast(a.icon + ' ' + a.name + ': ' + a.desc + '. ' + (S.achievements.includes(a.id) ? '¡Conseguido!' : 'Premio: ' + GL.rewardText(a.reward))); },
     credits: () => creditsSheet(),
+    license: () => licenseSheet(),
     zoomPoster: d => openOverlay('<div class="open-stage" data-act="closeOverlay"><img src="img/posters/' + d.car + '.webp" alt="" style="width:100%;max-width:1200px;border-radius:12px"><div class="tap-hint">Toca para cerrar</div></div>')
   };
 

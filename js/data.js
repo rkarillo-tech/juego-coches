@@ -3,6 +3,9 @@
    son estimaciones o cifras no oficiales. Revisa y amplía aquí: cada coche = 10 cromos. */
 window.GL = window.GL || {};
 
+GL.VERSION = '2.3.0';
+GL.REPO = 'https://github.com/rkarillo-tech/juego-coches';
+
 GL.RARITIES = {
   COMMON:    { id: 'COMMON',    label: 'Común',      short: 'C', color: '#9aa7b8', weight: 0.58,  scrap: 10,  craft: 60,   xp: 5 },
   RARE:      { id: 'RARE',      label: 'Rara',       short: 'R', color: '#38bdf8', weight: 0.28,  scrap: 25,  craft: 150,  xp: 10 },
