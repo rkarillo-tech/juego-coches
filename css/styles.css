@@ -322,3 +322,39 @@ h2.sec .count { margin-left: auto; white-space: nowrap; font-family: var(--body)
 .app-footer a, .link-inline { color: #9fd8ee; text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 .lic-text { white-space: pre-wrap; font-size: 11.5px; line-height: 1.45; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; color: var(--muted); }
 details > summary { cursor: pointer; color: #9fd8ee; font-weight: 700; margin: 10px 0 8px; }
+
+/* ===== Cartas de Leyenda ===== */
+.lcard { position: relative; aspect-ratio: 5/7; width: 100%; border-radius: 5.8% / 4.2%; overflow: hidden; background: #0b0f18;
+  box-shadow: 0 18px 40px -12px #000, 0 0 26px -6px var(--glow, #fbbf2466); transition: transform .12s ease-out; transform-style: preserve-3d; will-change: transform; touch-action: none; }
+.lcard canvas { display: block; width: 100%; height: 100%; }
+.lcard.lt1 { --glow: #e9b07c88; } .lcard.lt2 { --glow: #e5e9f0aa; } .lcard.lt3 { --glow: #fbbf24cc; }
+.lholo { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: color-dodge; opacity: .16;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), #ffffffcc, transparent 45%),
+    linear-gradient(115deg, transparent 25%, #ff4d6d66 38%, #fbbf2477 46%, #34d39966 54%, #38bdf877 62%, transparent 75%);
+  background-size: 100% 100%, 220% 220%; background-position: center, var(--mx, 50%) var(--my, 50%); }
+.lt2 .lholo { opacity: .34; } .lt3 .lholo { opacity: .55; }
+.lcard-big { width: min(82vw, 340px, 52vh); margin: 4px auto 0; }
+.lcard-cele { width: min(64vw, 260px, 38vh); margin: 16px auto; animation: popIn .6s cubic-bezier(.2,.9,.3,1.3); }
+.lcard .lholo { transition: opacity .2s; }
+
+/* ===== Salón de la Fama ===== */
+.hall { position: relative; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+  background: #05070c url('../img/hall/hall-tall.webp') center bottom / cover no-repeat; }
+@media (min-aspect-ratio: 1/1) { .hall { background-image: url('../img/hall/hall-wide.webp'); } }
+.hall::before { content: ''; position: absolute; inset: 0; background: linear-gradient(#000c 0, transparent 22%, transparent 78%, #000a 100%); pointer-events: none; }
+.hall-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(env(safe-area-inset-top) + 12px) 16px 8px; }
+.hall-title { font-family: var(--display); font-weight: 900; font-size: 19px; letter-spacing: .08em;
+  background: linear-gradient(90deg, #fde68a, #fbbf24, #fff, #fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent; }
+body.easy .hall-title { font-family: var(--body); letter-spacing: .03em; }
+.hall-track { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; align-items: flex-end; gap: 22px; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 calc(50% - var(--cw) / 2) 30vh; --cw: min(58vw, 250px, 34vh); }
+.hall-track::-webkit-scrollbar { display: none; }
+@media (min-aspect-ratio: 1/1) { .hall-track { --cw: min(30vh, 240px); padding-bottom: 33vh; } }
+.hall-item { position: relative; flex: none; width: var(--cw); scroll-snap-align: center; cursor: pointer; animation: hallIn .6s cubic-bezier(.2,.9,.3,1.1) backwards; }
+.hall-item:nth-child(2) { animation-delay: .08s; } .hall-item:nth-child(3) { animation-delay: .16s; }
+@keyframes hallIn { from { transform: translateY(40px); opacity: 0; } }
+.hall-item::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -16px; height: 14px; border-radius: 50%; background: #000; filter: blur(9px); opacity: .7; }
+.hall-fav { position: absolute; top: -12px; right: -8px; font-size: 26px; filter: drop-shadow(0 2px 4px #000); z-index: 2; }
+.hall-empty { display: grid; place-items: center; text-align: center; padding: 18px; font-size: 14px; color: #c9d4e8; background: #0b0f18cc; border: 2px dashed #ffffff40; box-shadow: none; }
+.hall-hint { position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 14px); text-align: center; font-size: 13.5px; color: #e8dcc0; text-shadow: 0 1px 4px #000; padding: 0 16px; }
+.hall-entry { background: linear-gradient(135deg, #2a2108, var(--panel) 60%); border-color: #fbbf2466; }

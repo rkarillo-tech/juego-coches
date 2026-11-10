@@ -122,6 +122,7 @@
   /* ================= Ayudas emergentes (una sola vez) ================= */
   function tip(id, ico, text) {
     if (!S || S.tips[id] || ui.tour) return;
+    if (id !== 'hallFirst' && !$('#overlay').classList.contains('hidden')) return;   // no tapar celebraciones ni sobres
     S.tips[id] = true; save();
     const old = $('#tipBox'); if (old) old.remove();
     const d = document.createElement('div'); d.className = 'tip'; d.id = 'tipBox';
@@ -136,7 +137,7 @@
       ['📦', 'Abre sobres para conseguir cromos. Tienes un sobre gratis cada día.'],
       ['🔥', 'Si entras días seguidos, sube tu racha y ganas premios extra.'],
       ['🔧', 'Las cartas repetidas te dan créditos. Con los créditos fabricas el cromo que te falta.'],
-      ['🏅', 'Al completar un coche ganas una medalla. Puedes mejorarla a plata y a oro.'],
+      ['🏅', 'Al completar un coche ganas una medalla y su Carta de Leyenda. Puedes mejorarlas a plata y a oro.'],
       ['📚', 'Haz los deberes, toca «¡Hecho!» en Premios y tus padres lo aprueban. ¡Ganas sobres!'],
       ['✅', 'Si no sabes qué hacer, mira el cuadro verde de Inicio.']] },
     home: { title: '🏠 Inicio', steps: [
@@ -144,6 +145,7 @@
       ['🎁', 'Arriba recoges tu sobre gratis de cada día.'],
       ['📋', 'Las misiones son pequeños retos del día. Al terminarlas, toca el botón amarillo para cobrar.'],
       ['📅', 'El objetivo semanal sube con cada tarea aprobada. Tiene 3 escalones con premio.'],
+      ['🏛️', 'En el Salón de la Fama están tus Cartas de Leyenda: una por cada coche completado.'],
       ['🏆', 'En la Vitrina ves tus medallas, insignias y trofeos.']] },
     album: { title: '📒 Álbum', steps: [
       ['🚗', 'Aquí están todos los coches, ordenados por marca.'],
@@ -291,12 +293,70 @@
       '<div class="row gap6" style="flex-direction:column">' + sayBtn('¿Qué hago ahora? ' + n.t) + '<button class="btn small green" data-act="' + n.act + '" ' + (n.extra || '') + '>' + n.btn + '</button></div></div>';
   }
 
+  /* ================= Cartas de Leyenda y Salón de la Fama ================= */
+  const tierOf = id => Math.max(1, S.medals[id] || 1);
+  const lcardHtml = (id, cls) => '<div class="lcard lt' + tierOf(id) + ' ' + (cls || '') + '" data-lcard="' + id + '"><canvas></canvas><i class="lholo"></i></div>';
+  function mountCards(root, W) {
+    (root || document).querySelectorAll('[data-lcard]').forEach(el => {
+      const cv = el.querySelector('canvas'); if (!cv || cv.dataset.done) return;
+      cv.dataset.done = '1'; GL.drawLegendCard(cv, el.dataset.lcard, tierOf(el.dataset.lcard), W || 750);
+    });
+  }
+  function setTilt(el, rx, ry) {
+    el.style.transform = 'perspective(900px) rotateX(' + rx.toFixed(1) + 'deg) rotateY(' + ry.toFixed(1) + 'deg)';
+    el.style.setProperty('--mx', (50 + ry * 3.2).toFixed(1) + '%'); el.style.setProperty('--my', (50 + rx * 3.2).toFixed(1) + '%');
+  }
+  document.addEventListener('pointermove', e => {
+    const el = e.target.closest && e.target.closest('.lcard.tilt'); if (!el) return;
+    const r = el.getBoundingClientRect();
+    setTilt(el, (0.5 - (e.clientY - r.top) / r.height) * 22, ((e.clientX - r.left) / r.width - 0.5) * 22);
+  });
+  window.addEventListener('deviceorientation', e => {
+    const el = document.querySelector('.lcard.tilt'); if (!el || e.gamma == null || e.beta == null) return;
+    const cl = v => Math.max(-14, Math.min(14, v));
+    setTilt(el, cl((45 - e.beta) / 2.5), cl(e.gamma / 2.5));
+  });
+  function bigLegend(id) {
+    const car = GL.carById[id]; if (!car || !GL.isComplete(S, id)) return;
+    const t = tierOf(id), m = GL.MEDALS[t], next = GL.MEDALS[t + 1];
+    openSheet('🃏 Carta de Leyenda', '<div class="lcard-big">' + lcardHtml(id, 'tilt') + '</div>' +
+      '<div class="center small muted mt12">Mueve el dedo sobre la carta o inclina el móvil para ver el brillo.</div>' +
+      '<div class="card mt12 small">' + m.icon + ' <b>Edición ' + m.name.toLowerCase() + '.</b> ' + (next ? 'Para mejorarla a ' + next.name.toLowerCase() + ': ' + next.how.charAt(0).toLowerCase() + next.how.slice(1) + '.' : '¡Es la mejor edición que existe!') + '</div>' +
+      '<button class="btn gold block mt12" data-act="dlCard" data-car="' + id + '">📥 Descargar para imprimir</button>' +
+      '<div class="row mt8 gap6"><button class="btn small grow" data-act="openCar" data-car="' + id + '">📋 Ver ficha</button><button class="btn small grow ' + (S.favorite === id ? 'gold' : '') + '" data-act="setFavCard" data-car="' + id + '">' + (S.favorite === id ? '⭐ Favorito' : '☆ Favorito') + '</button></div>',
+      { onMount: w => mountCards(w, 750) });
+  }
+  async function downloadCard(id) {
+    toast('🖨️ Preparando la carta…');
+    try {
+      const blob = await GL.cardBlob(id, tierOf(id), 1500);
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = 'garage-legends-' + id + '.png'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      toast('📥 Carta descargada. Tamaño de cromo: 6,3 × 8,8 cm.');
+    } catch (e) { toast('No se pudo crear la imagen.'); }
+  }
+  function hallCars() {
+    const ro = c => GL.RARITY_ORDER.indexOf(c.rarity);
+    return GL.CARS.filter(c => GL.isComplete(S, c.id)).sort((a, b) => (b.id === S.favorite) - (a.id === S.favorite) || tierOf(b.id) - tierOf(a.id) || ro(b) - ro(a));
+  }
+  function hall() {
+    const cars = hallCars(), n = k => cars.filter(c => tierOf(c.id) === k).length;
+    let items = cars.map(c => '<div class="hall-item" data-act="lcard" data-car="' + c.id + '">' + lcardHtml(c.id) + (c.id === S.favorite ? '<span class="hall-fav">⭐</span>' : '') + '</div>').join('');
+    if (!cars.length) items = '<div class="hall-item"><div class="lcard hall-empty"><div>🔒<br><br>Completa tu primer coche para conseguir tu primera Carta de Leyenda</div></div></div>';
+    closeSheet();
+    openOverlay('<div class="hall"><div class="hall-top"><button class="icon-btn" data-act="closeOverlay" aria-label="Cerrar">✕</button><div class="grow"><div class="hall-title">Salón de la Fama</div><div class="small">' + cars.length + ' de ' + GL.CARS.length + ' cartas · 🥇 ' + n(3) + ' · 🥈 ' + n(2) + ' · 🥉 ' + n(1) + '</div></div></div>' +
+      '<div class="hall-track">' + items + '</div><div class="hall-hint">' + (cars.length ? 'Desliza para ver tus cartas. Toca una para verla en grande.' : 'Aquí se expondrán tus coches completados.') + '</div></div>');
+    mountCards($('#overlay'), 460);
+    if (cars.length) setTimeout(() => tip('hallFirst', '🏛️', 'Este es tu Salón de la Fama. Cada coche que completas se convierte en una Carta de Leyenda. Tócala para verla en grande y descargarla.'), 500);
+  }
+
   /* ================= Vitrina ================= */
   const brandShort = b => ({ 'Mercedes-AMG': 'AMG', 'Mercedes-Benz': 'MB', 'Aston Martin': 'AM', 'Volkswagen': 'VW', 'Lamborghini': 'LAMBO', 'Koenigsegg': 'KOE', 'Chevrolet': 'CHEVY' }[b] || (b.length <= 5 ? b.toUpperCase() : b.slice(0, 3).toUpperCase()));
   function vitrina() {
     const medals = GL.CARS.filter(c => (S.medals[c.id] || 0) > 0);
     const gold = medals.filter(c => S.medals[c.id] === 3).length, silver = medals.filter(c => S.medals[c.id] === 2).length;
-    let b = '<div class="card small">' + sayBtn('Vitrina. Aquí guardas tus medallas de coches, las insignias de marca y los trofeos.') + ' Aquí guardas todo lo que vas consiguiendo. Toca cualquier cosa para saber cómo se gana.</div>';
+    let b = '<button class="btn gold block" style="margin-bottom:10px" data-act="hall">🏛️ Ir al Salón de la Fama</button><div class="card small">' + sayBtn('Vitrina. Aquí guardas tus medallas de coches, las insignias de marca y los trofeos.') + ' Aquí guardas todo lo que vas consiguiendo. Toca cualquier cosa para saber cómo se gana.</div>';
     b += '<h2 class="sec">🏅 Medallas de coches<span class="count">' + medals.length + '/' + GL.CARS.length + ' · 🥈' + silver + ' · 🥇' + gold + '</span></h2><div class="medal-grid">' +
       GL.CARS.slice().sort((x, y) => (S.medals[y.id] || 0) - (S.medals[x.id] || 0)).map(c => { const t = S.medals[c.id] || 0; return '<div class="medal ' + (t ? 't' + t : 'lock') + '" data-act="openCar" data-car="' + c.id + '"><img loading="lazy" src="' + carThumb(c.id) + '" alt=""><span class="md-ic">' + (t ? GL.MEDALS[t].icon : '🔒') + '</span><div class="md-nm">' + esc(c.model) + '</div></div>'; }).join('') + '</div>';
     b += '<h2 class="sec">🛡️ Insignias de marca<span class="count">' + S.brands.length + '/' + GL.BRANDS.length + '</span></h2><div class="small muted" style="margin:-4px 2px 10px">Completa todos los coches de una marca para ganar su insignia.</div><div class="emblem-grid">' +
@@ -316,7 +376,7 @@
     if (opts && opts.onMount) opts.onMount(w);
   }
   function closeSheet() { const w = $('#sheet'); w.classList.add('hidden'); w.innerHTML = ''; }
-  function openOverlay(html) { const o = $('#overlay'); o.innerHTML = html; o.classList.remove('hidden'); o.scrollTop = 0; }
+  function openOverlay(html) { const tb = $('#tipBox'); if (tb) tb.remove(); const o = $('#overlay'); o.innerHTML = html; o.classList.remove('hidden'); o.scrollTop = 0; }
   function closeOverlay() { const o = $('#overlay'); o.classList.add('hidden'); o.innerHTML = ''; hud(); }
 
   /* ================= Elementos visuales ================= */
@@ -467,7 +527,9 @@
     }
     const ach = GL.pendingAchievements(S);
     const nMed = Object.values(S.medals).filter(Boolean).length;
-    h += '<div class="card mt16 row" data-act="vitrina" style="cursor:pointer"><div style="font-size:28px">🏆</div><div class="grow"><b>Mi Vitrina</b><div class="small muted">🏅 ' + nMed + ' medallas · 🛡️ ' + S.brands.length + ' insignias · 🏆 ' + S.achievements.length + ' trofeos' + (ach ? ' · <span style="color:var(--gold)">' + ach + ' por cobrar</span>' : '') + '</div></div><span>›</span></div>';
+    const nCards = GL.CARS.filter(c => GL.isComplete(S, c.id)).length;
+    h += '<div class="card mt16 row hall-entry" data-act="hall" style="cursor:pointer"><div style="font-size:28px">🏛️</div><div class="grow"><b>Salón de la Fama</b><div class="small">' + (nCards ? nCards + (nCards === 1 ? ' Carta de Leyenda' : ' Cartas de Leyenda') : 'Completa un coche para conseguir tu primera carta') + '</div></div><span>›</span></div>';
+    h += '<div class="card mt12 row" data-act="vitrina" style="cursor:pointer"><div style="font-size:28px">🏆</div><div class="grow"><b>Mi Vitrina</b><div class="small muted">🏅 ' + nMed + ' medallas · 🛡️ ' + S.brands.length + ' insignias · 🏆 ' + S.achievements.length + ' trofeos' + (ach ? ' · <span style="color:var(--gold)">' + ach + ' por cobrar</span>' : '') + '</div></div><span>›</span></div>';
     const cc = GL.availableCars(S).find(c => { const n = GL.count(S, c.id); return n > 0 && n < 10 && S.credits >= GL.craftCost(c); });
     if (cc) setTimeout(() => tip('canCraft', '🛠️', 'Tienes créditos para fabricar un cromo. Entra en un coche del Álbum y toca el botón 🛠️ del cromo que te falta.'), 600);
 
@@ -549,7 +611,8 @@
         const prog = k === 2 ? Math.min(m.need, S.carQuiz[id] || 0) + '/' + m.need : k === 3 ? Math.min(m.need, S.carDupes[id] || 0) + '/' + m.need : '';
         return '<div class="medal-line ' + (on ? '' : 'off') + '"><div class="ml-i">' + m.icon + '</div><div class="grow"><b>' + m.name + (on ? ' ✅' : '') + '</b><div class="small muted">' + m.how + (m.reward ? ' · Premio: ' + GL.rewardText(m.reward) : '') + '</div></div>' + (on || !prog ? '' : '<span class="small">' + prog + '</span>') + '</div>';
       }).join('') +
-      '<button class="btn block mt12 ' + (S.favorite === id ? 'gold' : '') + '" data-act="setFav" data-car="' + id + '">' + (S.favorite === id ? '⭐ Es tu coche favorito' : '☆ Poner como mi favorito') + '</button>';
+      '<button class="btn primary block mt12" data-act="lcard" data-car="' + id + '">🃏 Ver su Carta de Leyenda</button>' +
+      '<button class="btn block mt8 ' + (S.favorite === id ? 'gold' : '') + '" data-act="setFav" data-car="' + id + '">' + (S.favorite === id ? '⭐ Es tu coche favorito' : '☆ Poner como mi favorito') + '</button>';
     } else {
       b += '<div class="small muted mt8">Toca una casilla vacía del puzle para ver qué dato esconde. Cada cromo nuevo revela un trozo de la foto y un dato del coche. Al completarlo ganas la medalla de bronce 🥉.</div>';
     }
@@ -670,7 +733,7 @@
     playEvents(events, () => {
       render();
       if (next && S.packs[type] > 0) openPackFlow(type);
-      else { tourEvent('reveal'); if (events.some(e => e.type === 'complete')) setTimeout(() => tip('firstMedal', '🏅', 'Has completado un coche y ganado su medalla de bronce. Mírala en tu Vitrina. Puedes mejorarla a plata y oro.'), 400); }
+      else { tourEvent('reveal'); if (events.some(e => e.type === 'complete')) setTimeout(() => tip('firstMedal', '🏅', 'Has completado un coche. Su Carta de Leyenda ya está en tu Salón de la Fama. Puedes mejorarla a plata y oro.'), 400); }
     });
   }
 
@@ -682,11 +745,12 @@
       if (!e) { closeOverlay(); if (done) done(); return; }
       if (e.type === 'complete') {
         const car = GL.carById[e.carId];
-        openOverlay('<div class="celebrate"><div class="big">¡COCHE COMPLETADO!</div><div class="car-hero done"><img src="' + carImg(car.id) + '" alt=""></div><div class="display" style="font-size:18px;font-weight:800">' + esc(car.brand) + ' ' + esc(car.model) + '</div><div class="mt8">' + rarTag(car.rarity) + '</div><div class="card mt16">🥉 <b>¡Medalla de bronce!</b><br>Premio: <b>+' + e.credits + ' 🔧</b> · <b>+' + GL.TUNING.completeXp + ' puntos</b>' + (GL.POSTERS.includes(car.id) ? '<br>🖼️ ¡Póster ilustrado desbloqueado!' : '') + '<br><span class="small muted">Ya puedes ver su ficha técnica completa.</span></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        openOverlay('<div class="celebrate"><div class="big">¡COCHE COMPLETADO!</div><div class="lcard-cele">' + lcardHtml(car.id, 'tilt') + '</div><div class="display" style="font-size:18px;font-weight:800">' + esc(car.brand) + ' ' + esc(car.model) + '</div><div class="mt8">' + rarTag(car.rarity) + '</div><div class="card mt16">🥉 <b>¡Medalla de bronce!</b><br>Premio: <b>+' + e.credits + ' 🔧</b> · <b>+' + GL.TUNING.completeXp + ' puntos</b>' + (GL.POSTERS.includes(car.id) ? '<br>🖼️ ¡Póster ilustrado desbloqueado!' : '') + '<br>🃏 <b>¡Nueva Carta de Leyenda</b> en tu Salón de la Fama!</div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        mountCards($('#overlay'), 600);
         sfx('complete'); confetti(['#fbbf24', '#fde68a', '#22d3ee', '#fff', R[car.rarity].color], 220); buzz([80, 60, 80, 60, 200]);
       } else if (e.type === 'medal') {
         const car = GL.carById[e.carId], m = GL.MEDALS[e.tier];
-        openOverlay('<div class="celebrate"><div style="font-size:90px;animation:popIn .6s">' + m.icon + '</div><div class="big">¡MEDALLA DE ' + m.name.toUpperCase() + '!</div><div class="display mt8" style="font-size:17px;font-weight:800">' + esc(car.brand + ' ' + car.model) + '</div><div class="card mt16">' + (e.tier === 2 ? 'Has acertado 3 preguntas de este coche. ¡Ya eres experto!' : 'Has conseguido 5 repetidos de este coche. ¡Edición oro!') + '<br>Premio: <b>' + GL.rewardText(e.reward) + '</b></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
+        openOverlay('<div class="celebrate"><div style="font-size:90px;animation:popIn .6s">' + m.icon + '</div><div class="big">¡MEDALLA DE ' + m.name.toUpperCase() + '!</div><div class="display mt8" style="font-size:17px;font-weight:800">' + esc(car.brand + ' ' + car.model) + '</div><div class="card mt16">' + (e.tier === 2 ? 'Has acertado 3 preguntas de este coche. ¡Ya eres experto!' : 'Has conseguido 5 repetidos de este coche. ¡Edición oro!') + '<br>🃏 Su Carta de Leyenda ahora es de <b>' + m.name.toLowerCase() + '</b>.<br>Premio: <b>' + GL.rewardText(e.reward) + '</b></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
         sfx('complete'); confetti(e.tier === 3 ? ['#fbbf24', '#fde68a', '#fff'] : ['#cbd5e1', '#fff', '#22d3ee'], 180); buzz([80, 60, 120]);
       } else if (e.type === 'brand') {
         openOverlay('<div class="celebrate"><div class="emblem" style="border:0;background:none"><div class="em-c" style="width:120px;height:120px;font-size:28px">' + esc(brandShort(e.brand)) + '</div></div><div class="big">¡INSIGNIA DE ' + esc(e.brand.toUpperCase()) + '!</div><div class="card mt16">Has completado todos los coches de ' + esc(e.brand) + '.<br>Premio: <b>' + GL.rewardText(e.reward) + '</b></div><div class="open-actions"><button class="btn gold" data-act="evNext">¡Genial!</button></div></div>');
@@ -1188,6 +1252,10 @@
     tourNext: () => tourNext(),
     tourSkip: () => endTour(false),
     vitrina: () => vitrina(),
+    hall: () => { sfx('tap'); hall(); },
+    lcard: d => { sfx('flip'); bigLegend(d.car); },
+    dlCard: d => downloadCard(d.car),
+    setFavCard: d => { S.favorite = S.favorite === d.car ? null : d.car; save(); sfx('tap'); bigLegend(d.car); if (!$('#overlay').classList.contains('hidden') && $('.hall')) hall(), bigLegend(d.car); else render(); },
     nsOpen: () => { const t = ['standard', 'epic', 'legendary'].find(x => S.packs[x] > 0); go('packs'); if (t) openPackFlow(t); },
     setFav: d => { S.favorite = S.favorite === d.car ? null : d.car; save(); sfx('tap'); openCar(d.car); render(); },
     emblemInfo: d => { const cars = GL.brandCars(d.b), done = cars.filter(c => GL.isComplete(S, c.id)).length; toast('🛡️ ' + d.b + ': ' + done + ' de ' + cars.length + ' coches completos. Premio: ' + GL.rewardText(GL.brandReward(d.b))); },

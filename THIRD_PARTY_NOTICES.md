@@ -6,6 +6,7 @@ El código de Garage Legends (juego, motor de sobres y economía, interfaz, tuto
 | --- | --- | --- | --- |
 | Fotografías de los 55 coches (Wikimedia Commons, varios autores; ver tabla de abajo) | Imágenes del álbum, cromos y desafío | Creative Commons (CC BY-SA 4.0, CC BY-SA 3.0, CC BY 4.0, CC BY 2.0) y CC0, según cada foto | Sí, en `img/cars/`, recortadas a 16:9 y convertidas a WebP |
 | Tipografía [Orbitron](https://fonts.google.com/specimen/Orbitron) — © Matt McInerney | Títulos y logotipo | [SIL Open Font License 1.1](https://openfontlicense.org) | Sí, en `fonts/orbitron.woff2` (paquete `@fontsource-variable/orbitron`) |
+| Fondos del Salón de la Fama | Decoración de la sala de trofeos | Creados por la familia con IA | Sí, en `img/hall/` |
 | Pósters ilustrados | Recompensa al completar algunos coches | Creados por la familia con IA; decorativos, pueden contener detalles inventados | Sí, en `img/posters/` |
 
 Los datos técnicos y las curiosidades de los coches son cifras de fábrica aproximadas recopiladas para el juego. Las marcas y nombres de modelos pertenecen a sus respectivos propietarios; este proyecto no está afiliado a ninguno de ellos.
