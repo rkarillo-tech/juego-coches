@@ -1,5 +1,4 @@
-window.GL_CREDITS = 
-{
+window.GL_CREDITS = {
  "vw-golf-gti": {
   "file": "VOLKSWAGEN GOLF GTI (Mk8 CD1) China.jpg",
   "url": "https://commons.wikimedia.org/wiki/File:VOLKSWAGEN_GOLF_GTI_(Mk8_CD1)_China.jpg",
@@ -328,6 +327,42 @@ window.GL_CREDITS =
   "file": "1980 BMW M1 1.jpg",
   "url": "https://commons.wikimedia.org/wiki/File:1980_BMW_M1_1.jpg",
   "author": "Calreyn88",
+  "license": "CC BY-SA 4.0"
+ },
+ "mclaren-w1": {
+  "file": "2024 McLaren W1 SP25.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:2024_McLaren_W1_SP25.jpg",
+  "author": "MrWalkr",
+  "license": "CC BY-SA 4.0"
+ },
+ "ferrari-f80": {
+  "file": "2025 Ferrari F80.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:2025_Ferrari_F80.jpg",
+  "author": "Calreyn88",
+  "license": "CC BY-SA 4.0"
+ },
+ "bugatti-tourbillon": {
+  "file": "Bugatti Tourbillon.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:Bugatti_Tourbillon.jpg",
+  "author": "MrWalkr",
+  "license": "CC BY-SA 4.0"
+ },
+ "pagani-utopia": {
+  "file": "Pagani Utopia Auto Zuerich 2023 1X7A1183.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:Pagani_Utopia_Auto_Zuerich_2023_1X7A1183.jpg",
+  "author": "Alexander-93",
+  "license": "CC BY-SA 4.0"
+ },
+ "gma-t50": {
+  "file": "2024 Gordon Murray Automotive T.50.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:2024_Gordon_Murray_Automotive_T.50.jpg",
+  "author": "MrWalkr",
+  "license": "CC BY-SA 4.0"
+ },
+ "lambo-sian": {
+  "file": "Lamborghini Sián IAA 2019 JM 1094.jpg",
+  "url": "https://commons.wikimedia.org/wiki/File:Lamborghini_Si%C3%A1n_IAA_2019_JM_1094.jpg",
+  "author": "Johannes Maximilian",
   "license": "CC BY-SA 4.0"
  }
 };

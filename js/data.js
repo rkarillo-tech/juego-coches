@@ -3,17 +3,18 @@
    son estimaciones o cifras no oficiales. Revisa y amplía aquí: cada coche = 10 cromos. */
 window.GL = window.GL || {};
 
-GL.VERSION = '2.5.0';
+GL.VERSION = '2.6.0';
 GL.REPO = 'https://github.com/rkarillo-tech/juego-coches';
 
 GL.RARITIES = {
-  COMMON:    { id: 'COMMON',    label: 'Común',      short: 'C', color: '#9aa7b8', weight: 0.58,  scrap: 10,  craft: 60,   xp: 5 },
-  RARE:      { id: 'RARE',      label: 'Rara',       short: 'R', color: '#38bdf8', weight: 0.28,  scrap: 25,  craft: 150,  xp: 10 },
-  EPIC:      { id: 'EPIC',      label: 'Épica',      short: 'E', color: '#b26bff', weight: 0.105, scrap: 60,  craft: 350,  xp: 20 },
-  LEGENDARY: { id: 'LEGENDARY', label: 'Legendaria', short: 'L', color: '#fbbf24', weight: 0.03,  scrap: 150, craft: 800,  xp: 40 },
-  MYTHIC:    { id: 'MYTHIC',    label: 'Mítica',     short: 'M', color: '#ff4d6d', weight: 0.005, scrap: 300, craft: 1600, xp: 80 }
+  COMMON:    { id: 'COMMON',    label: 'Común',      short: 'C', color: '#9aa7b8', weight: 0.58,  scrap: 15,  craft: 60,   xp: 5 },
+  RARE:      { id: 'RARE',      label: 'Rara',       short: 'R', color: '#38bdf8', weight: 0.28,  scrap: 40,  craft: 150,  xp: 10 },
+  EPIC:      { id: 'EPIC',      label: 'Épica',      short: 'E', color: '#b26bff', weight: 0.105, scrap: 90,  craft: 350,  xp: 20 },
+  CLASSIC:   { id: 'CLASSIC',   label: 'Clásica',    short: 'K', color: '#2dd4bf', weight: 0.02,  scrap: 220, craft: 900,  xp: 40 },
+  LEGENDARY: { id: 'LEGENDARY', label: 'Legendaria', short: 'L', color: '#fbbf24', weight: 0.03,  scrap: 200, craft: 800,  xp: 40 },
+  MYTHIC:    { id: 'MYTHIC',    label: 'Mítica',     short: 'M', color: '#ff4d6d', weight: 0.005, scrap: 400, craft: 1600, xp: 80 }
 };
-GL.RARITY_ORDER = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+GL.RARITY_ORDER = ['COMMON', 'RARE', 'EPIC', 'CLASSIC', 'LEGENDARY', 'MYTHIC'];
 
 /* Los 10 cromos de cada coche: cada uno revela un dato distinto */
 GL.PIECES = [
@@ -181,32 +182,51 @@ GL.CARS = [
     engine: '4 motores eléctricos', hp: 1914, accel: 2.0, top: 412, weight: 2300, drive: 'Total · 1 velocidad por motor', production: '150 unidades',
     fact: 'Hecho en Croacia. En 2023 batió 23 récords de aceleración y frenada en un solo día.', tags: ['electric'] },
 
-  /* ======================= MÍTICAS (se desbloquean subiendo de nivel) ======================= */
-  { id: 'ferrari-f40', brand: 'Ferrari', model: 'F40', country: 'IT', rarity: 'MYTHIC', unlock: 3, year: 1987,
+  /* ======================= MÍTICAS: hiperdeportivos modernos (se desbloquean subiendo de nivel) ======================= */
+  { id: 'mclaren-w1', brand: 'McLaren', model: 'W1', country: 'GB', rarity: 'MYTHIC', unlock: 3, year: 2024,
+    engine: '4.0 V8 biturbo + motor eléctrico', hp: 1275, accel: 2.7, top: 350, weight: 1399, drive: 'Trasera · DCT 8', production: '399 unidades',
+    fact: 'Es el heredero del McLaren F1 y del P1, y el McLaren de calle más potente de la historia.', tags: ['v8', 'hybrid'] },
+  { id: 'lambo-sian', brand: 'Lamborghini', model: 'Sián FKP 37', country: 'IT', rarity: 'MYTHIC', unlock: 5, year: 2019,
+    engine: '6.5 V12 + supercondensador eléctrico', hp: 819, accel: 2.8, top: 350, weight: 1595, drive: 'Total · ISR 7', production: '63 unidades',
+    fact: '«Sián» significa «relámpago» en el dialecto de Bolonia. Se hicieron 63 porque Lamborghini se fundó en 1963.', tags: ['v12', 'hybrid'] },
+  { id: 'ferrari-f80', brand: 'Ferrari', model: 'F80', country: 'IT', rarity: 'MYTHIC', unlock: 9, year: 2024,
+    engine: '3.0 V6 biturbo + 3 motores eléctricos', hp: 1200, accel: 2.15, top: 350, weight: 1525, drive: 'Total · DCT 8', production: '799 unidades',
+    fact: 'Su motor V6 viene del Ferrari 499P, ganador de las 24 Horas de Le Mans. Es el Ferrari de calle más potente de la historia.', tags: ['hybrid'] },
+  { id: 'gma-t50', brand: 'Gordon Murray', model: 'T.50', country: 'GB', rarity: 'MYTHIC', unlock: 11, year: 2022,
+    engine: '3.9 V12 atmosférico (Cosworth)', hp: 663, accel: 2.8, top: 340, weight: 986, drive: 'Trasera · Manual 6', production: '100 unidades',
+    fact: 'Lo diseñó Gordon Murray, el creador del McLaren F1: el conductor va en el centro y un ventilador trasero lo pega al suelo. Su V12 gira a 12.100 rpm.', tags: ['v12', 'manual'], approx: ['accel', 'top'] },
+  { id: 'pagani-utopia', brand: 'Pagani', model: 'Utopia', country: 'IT', rarity: 'MYTHIC', unlock: 15, year: 2022,
+    engine: '6.0 V12 biturbo (AMG)', hp: 864, accel: 3.0, top: 350, weight: 1280, drive: 'Trasera · Manual 7 / Automatizado 7', production: '99 coupés',
+    fact: 'Se puede pedir con cambio manual de 7 marchas y la palanca a la vista, algo rarísimo en un hiperdeportivo actual.', tags: ['v12', 'manual'], approx: ['accel', 'top'] },
+  { id: 'bugatti-tourbillon', brand: 'Bugatti', model: 'Tourbillon', country: 'FR', rarity: 'MYTHIC', unlock: 19, year: 2024,
+    engine: '8.3 V16 atmosférico + 3 motores eléctricos', hp: 1800, accel: 2.0, top: 445, weight: 1995, drive: 'Total · DCT 8', production: '250 unidades',
+    fact: 'Se llama como un mecanismo de relojería: su cuadro de instrumentos es analógico y lo fabrican relojeros suizos.', tags: ['hybrid'], approx: ['accel', 'top'] },
+
+  { id: 'ferrari-f40', brand: 'Ferrari', model: 'F40', country: 'IT', rarity: 'CLASSIC', year: 1987,
     engine: '2.9 V8 biturbo', hp: 478, accel: 4.1, top: 324, weight: 1100, drive: 'Trasera · Manual 5', production: '1.315 unidades',
     fact: 'Fue el último Ferrari aprobado por Enzo Ferrari en persona y el primer coche de calle en superar las 200 millas/h.', tags: ['v8', 'classic', 'manual'], approx: ['accel'] },
-  { id: 'mercedes-300sl', brand: 'Mercedes-Benz', model: '300 SL "Alas de Gaviota"', country: 'DE', rarity: 'MYTHIC', unlock: 5, year: 1954,
+  { id: 'mercedes-300sl', brand: 'Mercedes-Benz', model: '300 SL "Alas de Gaviota"', country: 'DE', rarity: 'CLASSIC', year: 1954,
     engine: '3.0 6 en línea con inyección', hp: 215, accel: 10, top: 260, weight: 1295, drive: 'Trasera · Manual 4', production: '1.400 unidades',
     fact: 'Fue el primer coche de serie con inyección directa de gasolina. Sus puertas suben como alas porque el chasis tubular era muy alto.', tags: ['classic', 'manual'], approx: ['accel'] },
-  { id: 'lambo-countach', brand: 'Lamborghini', model: 'Countach LP400', country: 'IT', rarity: 'MYTHIC', unlock: 7, year: 1974,
+  { id: 'lambo-countach', brand: 'Lamborghini', model: 'Countach LP400', country: 'IT', rarity: 'CLASSIC', year: 1974,
     engine: '4.0 V12 atmosférico', hp: 375, accel: 5.6, top: 290, weight: 1065, drive: 'Trasera · Manual 5', production: '≈ 150 unidades',
     fact: '"Countach" es una exclamación de asombro en dialecto piamontés. Fue el primer Lamborghini con puertas de tijera.', tags: ['v12', 'classic', 'manual'], approx: ['accel', 'top'] },
-  { id: 'bmw-m1', brand: 'BMW', model: 'M1 (E26)', country: 'DE', rarity: 'MYTHIC', unlock: 9, year: 1978,
+  { id: 'bmw-m1', brand: 'BMW', model: 'M1 (E26)', country: 'DE', rarity: 'CLASSIC', year: 1978,
     engine: '3.5 6 en línea atmosférico', hp: 277, accel: 5.6, top: 262, weight: 1300, drive: 'Trasera · Manual 5', production: '453 unidades',
     fact: 'Es el único superdeportivo de motor central de BMW. Tuvo su propia copa, la Procar, con pilotos de Fórmula 1.', tags: ['classic', 'manual'] },
-  { id: 'mclaren-f1', brand: 'McLaren', model: 'F1', country: 'GB', rarity: 'MYTHIC', unlock: 11, year: 1992,
+  { id: 'mclaren-f1', brand: 'McLaren', model: 'F1', country: 'GB', rarity: 'CLASSIC', year: 1992,
     engine: '6.1 V12 BMW atmosférico', hp: 627, accel: 3.2, top: 386, weight: 1138, drive: 'Trasera · Manual 6', production: '106 unidades',
     fact: 'El conductor va sentado en el centro. El vano motor está forrado de oro, porque refleja muy bien el calor.', tags: ['v12', 'classic', 'manual'] },
-  { id: 'ferrari-enzo', brand: 'Ferrari', model: 'Enzo', country: 'IT', rarity: 'MYTHIC', unlock: 13, year: 2002,
+  { id: 'ferrari-enzo', brand: 'Ferrari', model: 'Enzo', country: 'IT', rarity: 'CLASSIC', year: 2002,
     engine: '6.0 V12 atmosférico', hp: 660, accel: 3.65, top: 350, weight: 1365, drive: 'Trasera · F1 6', production: '400 unidades',
     fact: 'La unidad nº 400 se regaló al papa Juan Pablo II, que la subastó para obras benéficas.', tags: ['v12'] },
-  { id: 'pagani-huayra', brand: 'Pagani', model: 'Huayra Roadster BC', country: 'IT', rarity: 'MYTHIC', unlock: 15, year: 2019,
+  { id: 'pagani-huayra', brand: 'Pagani', model: 'Huayra Roadster BC', country: 'IT', rarity: 'MYTHIC', unlock: 7, year: 2019,
     engine: '6.0 V12 biturbo (AMG)', hp: 802, accel: 2.8, top: 370, weight: 1250, drive: 'Trasera · Secuencial 7', production: '40 unidades',
     fact: '"Huayra" es el dios del viento de los incas. "BC" homenajea a Benny Caiola, el primer cliente de Pagani.', tags: ['v12'], approx: ['accel', 'top'] },
-  { id: 'aston-valkyrie', brand: 'Aston Martin', model: 'Valkyrie', country: 'GB', rarity: 'MYTHIC', unlock: 17, year: 2021,
+  { id: 'aston-valkyrie', brand: 'Aston Martin', model: 'Valkyrie', country: 'GB', rarity: 'MYTHIC', unlock: 13, year: 2021,
     engine: '6.5 V12 Cosworth + motor eléctrico', hp: 1155, accel: 2.5, top: 350, weight: 1355, drive: 'Trasera · Secuencial 7', production: '150 coupés',
     fact: 'Lo diseñó Adrian Newey, ingeniero de Fórmula 1. Su V12 gira hasta 11.100 rpm.', tags: ['v12', 'hybrid'], approx: ['accel', 'top'] },
-  { id: 'bugatti-bolide', brand: 'Bugatti', model: 'Bolide', country: 'FR', rarity: 'MYTHIC', unlock: 19, year: 2024,
+  { id: 'bugatti-bolide', brand: 'Bugatti', model: 'Bolide', country: 'FR', rarity: 'MYTHIC', unlock: 17, year: 2024,
     engine: '8.0 W16 cuádruple turbo', hp: 1600, accel: 2.2, top: 380, weight: 1450, drive: 'Total · DSG 7', production: '40 unidades',
     fact: 'Es solo para circuito: no se puede matricular para ir por la calle.', tags: ['w16'] },
   { id: 'koenigsegg-jesko', brand: 'Koenigsegg', model: 'Jesko', country: 'SE', rarity: 'MYTHIC', unlock: 21, year: 2021,

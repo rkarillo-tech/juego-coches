@@ -14,7 +14,7 @@
     foilScrapMult: 2,
     dupeXp: 2,
     completeXp: 60,
-    completeCredits: { COMMON: 40, RARE: 80, EPIC: 150, LEGENDARY: 300, MYTHIC: 600 },
+    completeCredits: { COMMON: 40, RARE: 80, EPIC: 150, CLASSIC: 300, LEGENDARY: 300, MYTHIC: 600 },
     quizPerDay: 3,
     quizCreditPerHit: 5,
     quizPerfectBonus: 25,
@@ -76,7 +76,11 @@
       tutorialDone: false,
       tips: {},                   // ayudas emergentes ya vistas
       lastBackup: null,
-      newCars: []                 // coches descubiertos recientemente (para destacar)
+      newCars: [],                // coches descubiertos recientemente (para destacar)
+      surprises: [],              // hitos sorpresa ya celebrados
+      surprisesInit: false,
+      chest: { last: null, day: null, ready: false },
+      seen: {}                    // novedades ya mostradas
     };
   };
 
@@ -183,7 +187,8 @@
       if (c.rarity === 'MYTHIC') s.stats.mythicPulled++;
       s.stats.cards++;
       if (dup) {
-        c.scrap = R[c.rarity].scrap * (foil ? T.foilScrapMult : 1);
+        c.market = GL.marketBrand() === car.brand;
+        c.scrap = R[c.rarity].scrap * (foil ? T.foilScrapMult : 1) * (c.market ? 2 : 1);
         s.credits += c.scrap;
         s.stats.dupes++;
         GL.addXp(s, T.dupeXp, events);
@@ -276,6 +281,12 @@
     { from: 10, icon: '🏁', name: 'Piloto Pro' }, { from: 15, icon: '🏆', name: 'Campeón' }, { from: 20, icon: '👑', name: 'Leyenda' }
   ];
   GL.rank = level => GL.RANKS.filter(r => level >= r.from).pop();
+
+  /* ---------- Mercado del Taller: cada día una marca está de moda y sus repetidos valen el doble ---------- */
+  GL.marketBrand = function (day) {
+    const k = day || GL.dayKey();
+    return GL.BRANDS[hashStr('mercado|' + k) % GL.BRANDS.length];
+  };
 
   /* ---------- Taller ---------- */
   GL.craftCost = car => R[car.rarity].craft;
@@ -431,7 +442,8 @@
     { id: 'v12',       icon: '🎻', name: 'Club V12',              desc: 'Completa 3 coches con motor V12',        test: s => countBy(s, c => c.tags.includes('v12')) >= 3, reward: { pack: 'epic', n: 1 } },
     { id: 'hp1000',    icon: '💥', name: 'Club de los 1.000 CV',  desc: 'Completa 3 coches de 1.000 CV o más',    test: s => countBy(s, c => c.hp >= 1000) >= 3, reward: { pack: 'legendary', n: 1 } },
     { id: 'volt',      icon: '🔋', name: 'Voltaje',               desc: 'Completa 3 eléctricos o híbridos',       test: s => countBy(s, c => c.tags.includes('electric') || c.tags.includes('hybrid')) >= 3, reward: { pack: 'epic', n: 1 } },
-    { id: 'classic',   icon: '🕰️', name: 'Clásico eterno',        desc: 'Completa un clásico mítico',             test: s => countBy(s, c => c.tags.includes('classic')) >= 1, reward: { pack: 'epic', n: 1 } },
+    { id: 'classic',   icon: '🕰️', name: 'Clásico eterno',        desc: 'Completa un coche clásico',             test: s => countBy(s, c => c.tags.includes('classic')) >= 1, reward: { pack: 'epic', n: 1 } },
+    { id: 'classics',  icon: '📻', name: 'Leyendas clásicas',     desc: 'Completa los 6 coches clásicos',        test: s => countBy(s, c => c.rarity === 'CLASSIC') >= 6, reward: { pack: 'legendary', n: 1 } },
     { id: 'streak7',   icon: '📆', name: 'Constancia',            desc: 'Racha de 7 días seguidos',               test: s => s.daily.best >= 7,  reward: { credits: 150 } },
     { id: 'streak30',  icon: '🗓️', name: 'Imparable',             desc: 'Racha de 30 días seguidos',              test: s => s.daily.best >= 30, reward: { pack: 'legendary', n: 1 } },
     { id: 'study10',   icon: '📚', name: 'Buen estudiante',       desc: '10 tareas aprobadas',                    test: s => s.stats.tasksApproved >= 10, reward: { pack: 'epic', n: 1 } },
@@ -455,6 +467,76 @@
     return a.reward;
   };
   GL.pendingAchievements = s => GL.ACHIEVEMENTS.filter(a => !s.achievements.includes(a.id) && a.test(s)).length;
+
+  /* ---------- Sorpresas: hitos que se celebran sin avisar ---------- */
+  const pc = s => Object.values(s.pieces).reduce((a, b) => a + b.length, 0);
+  GL.MILESTONES = [
+    { id: 'p50',  icon: '🃏', text: '¡Ya tienes 50 cromos en tu álbum!',            test: s => pc(s) >= 50,  reward: { pack: 'standard', n: 1 } },
+    { id: 'p100', icon: '💯', text: '¡100 cromos! Tu álbum ya impone.',            test: s => pc(s) >= 100, reward: { pack: 'epic', n: 1 } },
+    { id: 'p200', icon: '🔥', text: '¡200 cromos conseguidos!',                    test: s => pc(s) >= 200, reward: { pack: 'epic', n: 1 } },
+    { id: 'p300', icon: '🚀', text: '¡300 cromos! Esto ya es un museo.',           test: s => pc(s) >= 300, reward: { pack: 'legendary', n: 1 } },
+    { id: 'p450', icon: '👑', text: '¡450 cromos! Te queda muy poco.',             test: s => pc(s) >= 450, reward: { pack: 'legendary', n: 1 } },
+    { id: 't5',   icon: '📚', text: '¡5 tareas aprobadas! Te lo estás currando.',  test: s => s.stats.tasksApproved >= 5,   reward: { pack: 'standard', n: 1 } },
+    { id: 't15',  icon: '💪', text: '¡15 tareas aprobadas! Eso es constancia.',    test: s => s.stats.tasksApproved >= 15,  reward: { pack: 'epic', n: 1 } },
+    { id: 't30',  icon: '🎓', text: '¡30 tareas aprobadas! Qué esfuerzo.',         test: s => s.stats.tasksApproved >= 30,  reward: { pack: 'legendary', n: 1 } },
+    { id: 't60',  icon: '🏅', text: '¡60 tareas aprobadas! Eres imparable.',       test: s => s.stats.tasksApproved >= 60,  reward: { pack: 'legendary', n: 1 } },
+    { id: 't100', icon: '🌟', text: '¡100 tareas aprobadas! Increíble.',           test: s => s.stats.tasksApproved >= 100, reward: { pack: 'legendary', n: 2 } },
+    { id: 'c3',   icon: '🚗', text: '¡3 coches completos en tu garaje!',          test: s => s.completedCars.length >= 3,  reward: { credits: 200 } },
+    { id: 'c10',  icon: '🏎️', text: '¡10 coches completos!',                      test: s => s.completedCars.length >= 10, reward: { pack: 'epic', n: 1 } },
+    { id: 'c25',  icon: '🏁', text: '¡25 coches completos! Menudo garaje.',        test: s => s.completedCars.length >= 25, reward: { pack: 'legendary', n: 1 } },
+    { id: 'c45',  icon: '💎', text: '¡45 coches completos!',                      test: s => s.completedCars.length >= 45, reward: { pack: 'legendary', n: 1 } },
+    { id: 's14',  icon: '📆', text: '¡Dos semanas seguidas en el garaje!',        test: s => s.daily.best >= 14,           reward: { pack: 'epic', n: 1 } },
+    { id: 'b1',   icon: '🛡️', text: '¡Tu primera insignia de marca!',             test: s => s.brands.length >= 1,         reward: { credits: 300 } }
+  ];
+  /* Al actualizar, lo que ya había conseguido no se celebra de golpe */
+  GL.initSurprises = function (s) {
+    if (s.surprisesInit) return;
+    s.surprises = GL.MILESTONES.filter(m => m.test(s)).map(m => m.id);
+    s.surprisesInit = true;
+  };
+  GL.nextSurprise = function (s) {
+    GL.initSurprises(s);
+    const m = GL.MILESTONES.find(x => !s.surprises.includes(x.id) && x.test(s));
+    if (!m) return null;
+    s.surprises.push(m.id);
+    GL.grant(s, m.reward);
+    GL.log(s, '🎉', 'Sorpresa: ' + m.text.replace(/[¡!]/g, ''));
+    return m;
+  };
+
+  /* Cofre misterioso: aparece algún día, como mucho uno cada 5 días */
+  GL.chestReady = function (s) {
+    if (!s.chest) s.chest = { last: null, day: null, ready: false };
+    const today = GL.dayKey();
+    if (s.chest.day === today) return s.chest.ready;
+    s.chest.day = today;
+    const since = s.chest.last ? Math.round((new Date(today) - new Date(s.chest.last)) / DAY) : 99;
+    const age = (Date.now() - (s.created || Date.now())) / DAY;
+    s.chest.ready = !GL.clockTampered(s) && age >= 2 && since >= 5 && (hashStr('cofre|' + today + '|' + s.created) % 100) < 35;
+    return s.chest.ready;
+  };
+  GL.openChest = function (s) {
+    if (!GL.chestReady(s)) return null;
+    s.chest.ready = false; s.chest.last = GL.dayKey();
+    const r = rand(), events = [];
+    let out;
+    if (r < 0.12) {
+      const cars = GL.availableCars(s).filter(c => (c.rarity === 'RARE' || c.rarity === 'EPIC') && !GL.isComplete(s, c.id));
+      if (cars.length) {
+        const car = pick(cars), n = pick(GL.missing(s, car.id));
+        s.credits += GL.craftCost(car); s.stats.crafted--;
+        const res = GL.craft(s, car.id, n);
+        out = { card: res.card }; events.push(...res.events);
+      }
+    }
+    if (!out) {
+      const reward = r < 0.30 ? { pack: 'epic', n: 1 } : r < 0.60 ? { pack: 'standard', n: 1 } : { credits: 100 + 50 * Math.floor(rand() * 4) };
+      GL.grant(s, reward); out = { reward };
+    }
+    GL.log(s, '🎁', 'Cofre misterioso abierto');
+    out.events = events;
+    return out;
+  };
 
   /* ---------- Desafío (quiz) ---------- */
   GL.QUIZ_STATS = [
@@ -565,6 +647,9 @@
     s.brands = idList(raw.brands, x => GL.BRANDS.includes(x));
     s.favorite = (typeof raw.favorite === 'string' && GL.carById[raw.favorite]) ? raw.favorite : null;
     s.tutorialDone = !!raw.tutorialDone;
+    s.surprises = idList(raw.surprises, x => GL.MILESTONES.some(m => m.id === x)); s.surprisesInit = !!raw.surprisesInit;
+    if (raw.chest && typeof raw.chest === 'object') s.chest = { last: typeof raw.chest.last === 'string' ? raw.chest.last.slice(0, 10) : null, day: null, ready: false };
+    if (raw.seen && typeof raw.seen === 'object') for (const k in raw.seen) if (k.length < 20) s.seen[k] = true;
     if (raw.tips && typeof raw.tips === 'object') for (const k in raw.tips) if (k.length < 30) s.tips[k] = true;
     return s;
   };

@@ -2,11 +2,11 @@
 
 Álbum de cromos digital de coches para el móvil. Es una web instalable (PWA): funciona sin conexión y no necesita tienda de aplicaciones ni servidor propio.
 
-**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.5.0
+**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.6.0
 
 ## Qué incluye
 
-- **55 coches reales en 25 marcas** (BMW, Mercedes-AMG, Porsche, Ferrari, Lamborghini, Bugatti, Cupra, Toyota…), con 5 rarezas según lo exclusivo que sea el coche: Común, Rara, Épica, Legendaria y Mítica.
+- **61 coches reales en 25 marcas** (BMW, Mercedes-AMG, Porsche, Ferrari, Lamborghini, Bugatti, Cupra, Toyota…), con 6 rarezas según lo exclusivo que sea el coche: Común, Rara, Épica, Clásica, Legendaria y Mítica (hiperdeportivos modernos).
 - **10 cromos por coche.** Cada cromo destapa un trozo de la foto y un dato real: motor, potencia, 0‑100, velocidad, peso, tracción, producción y una curiosidad (el nº 10, brillante).
 - **Sobres** con animación y cartas que se giran, en tres tipos: Garage, Nitro y Apex. Llevan protección contra la mala suerte: Legendaria garantizada tras 8 sobres sin ninguna, y si un sobre no trae nada nuevo, el siguiente trae un cromo nuevo seguro.
 - **Taller:** los repetidos se convierten en créditos para fabricar el cromo exacto que falta, conseguir un cromo sorpresa o comprar sobres.
@@ -16,6 +16,7 @@
 - **Coleccionables:** cada coche completo da una medalla de bronce que se mejora a plata (acertar 3 preguntas de ese coche en el Desafío) y a oro (5 repetidos de ese coche). Además hay insignias por completar marcas, trofeos, rangos de piloto (de Aprendiz a Leyenda), coche favorito en Inicio y una Vitrina para verlo todo.
 - **Álbum en hojas:** una hoja de papel por marca, con huecos numerados donde se «pegan» los cromos; se pasa de hoja deslizando, tiene índice y los cromos nuevos se ven pegarse al abrir su hoja.
 - **Cartas de Leyenda y Salón de la Fama:** cada coche completado se convierte en una carta metálica con su foto, sus datos y número de serie. El marco es de bronce, plata u oro según la medalla, brilla al inclinar el móvil y se puede **descargar para imprimir** a tamaño de cromo. Todas se exponen en el Salón de la Fama.
+- **Mercado del Taller y sorpresas:** cada día una marca está de moda y sus repetidos valen el doble; cofres misteriosos de vez en cuando y regalos sorpresa al alcanzar hitos (cromos, tareas, coches, rachas).
 - **Panel de padres:** tareas y premios editables, límite diario de aprobaciones, resumen, copias de seguridad y herramientas.
 
 ## Probarlo en el ordenador
