@@ -364,10 +364,10 @@
     const gold = medals.filter(c => S.medals[c.id] === 3).length, silver = medals.filter(c => S.medals[c.id] === 2).length;
     let b = '<button class="btn gold block" style="margin-bottom:10px" data-act="hall">🏛️ Ir al Salón de la Fama</button><div class="card small">' + sayBtn('Vitrina. Aquí guardas tus medallas de coches, las insignias de marca y los trofeos.') + ' Aquí guardas todo lo que vas consiguiendo. Toca cualquier cosa para saber cómo se gana.</div>';
     b += '<h2 class="sec">🏅 Medallas de coches<span class="count">' + medals.length + '/' + GL.CARS.length + ' · 🥈' + silver + ' · 🥇' + gold + '</span></h2><div class="medal-grid">' +
-      GL.CARS.slice().sort((x, y) => (S.medals[y.id] || 0) - (S.medals[x.id] || 0)).map(c => { const t = S.medals[c.id] || 0; return '<div class="medal ' + (t ? 't' + t : 'lock') + '" data-act="openCar" data-car="' + c.id + '">' + (t ? '<img loading="lazy" src="' + carThumb(c.id) + '" alt="">' : '<div class="md-ph">?</div>') + '<span class="md-ic">' + (t ? GL.MEDALS[t].icon : '🔒') + '</span><div class="md-nm">' + esc(c.model) + '</div></div>'; }).join('') + '</div>';
+      GL.CARS.slice().sort((x, y) => (S.medals[y.id] || 0) - (S.medals[x.id] || 0)).map(c => { const t = S.medals[c.id] || 0; return '<div class="medal ' + (t ? 't' + t : 'lock') + '" data-act="openCar" data-car="' + c.id + '">' + (t ? '<img loading="lazy" src="' + carThumb(c.id) + '" alt="">' : '<div class="md-ph">?</div>') + '<span class="md-ic">' + (t ? GL.MEDALS[t].icon : '🔒') + '</span><div class="md-nm">' + esc(carName(c)) + '</div></div>'; }).join('') + '</div>';
     b += '<h2 class="sec">🛡️ Insignias de marca<span class="count">' + S.brands.length + '/' + GL.BRANDS.length + '</span></h2><div class="small muted" style="margin:-4px 2px 10px">Completa todos los coches de una marca para ganar su insignia.</div><div class="emblem-grid">' +
       GL.BRANDS.slice().sort((x, y) => S.brands.includes(y) - S.brands.includes(x)).map(br => { const cars = GL.brandCars(br), done = cars.filter(c => GL.isComplete(S, c.id)).length, got = S.brands.includes(br);
-        return '<div class="emblem ' + (got ? '' : 'lock') + '" data-act="emblemInfo" data-b="' + esc(br) + '"><div class="em-c">' + esc(brandShort(br)) + '</div><div class="em-n">' + esc(br) + '</div><div class="em-p">' + done + '/' + cars.length + '</div></div>'; }).join('') + '</div>';
+        return '<div class="emblem ' + (got ? '' : 'lock') + '" data-act="emblemInfo" data-b="' + esc(br) + '"><div class="em-c">' + esc(knownBrand(br) ? brandShort(br) : '?') + '</div><div class="em-n">' + esc(brandName(br)) + '</div><div class="em-p">' + done + '/' + cars.length + '</div></div>'; }).join('') + '</div>';
     b += '<h2 class="sec">🏆 Trofeos<span class="count">' + S.achievements.length + '/' + GL.ACHIEVEMENTS.length + '</span></h2><div class="trophy-grid">' +
       GL.ACHIEVEMENTS.slice().sort((x, y) => S.achievements.includes(y.id) - S.achievements.includes(x.id)).map(a => { const got = S.achievements.includes(a.id); return '<div class="trophy ' + (got ? '' : 'lock') + '" data-act="trophyInfo" data-id="' + a.id + '"><div class="tr-i">' + a.icon + '</div>' + esc(a.name) + '</div>'; }).join('') + '</div>';
     openSheet('🏆 Mi Vitrina', b);
@@ -391,6 +391,12 @@
   const region = (id, n) => { const col = (n - 1) % 5, row = Math.floor((n - 1) / 5); return 'background-image:url(' + carImg(id) + ');background-position:' + (col * 25) + '% ' + (row * 100) + '%'; };
   const rarTag = r => '<span class="tag rar rar-' + r + '">' + R[r].label + '</span>';
 
+  /* Sin destripes: lo no descubierto se muestra como misterio */
+  const known = car => GL.isDiscovered(S, car.id);
+  const knownBrand = b => GL.brandCars(b).some(known);
+  const carName = car => known(car) ? car.model : '???';
+  const brandName = b => knownBrand(b) ? b : 'Marca secreta';
+  const flagOf = b => knownBrand(b) ? GL.COUNTRIES[GL.brandCars(b)[0].country].flag : '❔';
   function puzzleCells(carId, big) {
     let h = '';
     for (let n = 1; n <= 10; n++) {
@@ -419,7 +425,7 @@
     return '<div class="tile ' + cls + '" style="--rc:' + R[car.rarity].color + '" data-act="openCar" data-car="' + car.id + '">' +
       '<div class="ph">' + (done ? '<img loading="lazy" src="' + carThumb(car.id) + '" alt="">' : (unlocked && cnt > 0 ? puzzleCells(car.id, false) : '')) +
       '<span class="rdot">' + rarTag(car.rarity) + '</span>' + (isNew ? '<span class="newb">NUEVO</span>' : '') + (done && S.medals[car.id] ? '<span class="medal-badge">' + GL.MEDALS[S.medals[car.id]].icon + '</span>' : '') + '</div>' +
-      '<div class="info"><div class="br">' + esc(car.brand) + '</div><div class="nm">' + esc(car.model) + '</div>' +
+      '<div class="info"><div class="br">' + esc(brandName(car.brand)) + '</div><div class="nm">' + esc(carName(car)) + '</div>' +
       (unlocked ? '<div class="pr"><div class="progress' + (done ? ' gold' : '') + '"><span style="width:' + cnt * 10 + '%"></span></div>' + cnt + '/10</div>'
         : '<div class="pr">🔒 Nivel ' + car.unlock + '</div>') + '</div></div>';
   }
@@ -521,7 +527,7 @@
   }
   function totalPieces() { return Object.values(S.pieces).reduce((a, b) => a + b.length, 0); }
 
-  const marketHtml = () => '<div class="market" data-act="marketInfo"><span class="mk-i">📈</span><div class="grow"><b>Mercado de hoy:</b> los repetidos de <b>' + esc(GL.marketBrand()) + '</b> valen el doble</div><span>›</span></div>';
+  const marketHtml = () => '<div class="market" data-act="marketInfo"><span class="mk-i">📈</span><div class="grow"><b>Mercado de hoy:</b> los repetidos de <b>' + esc(GL.marketBrand(S)) + '</b> valen el doble</div><span>›</span></div>';
   function homeView() {
     const avail = GL.dailyAvailable(S), tampered = GL.clockTampered(S);
     const packs = S.packs.standard + S.packs.epic + S.packs.legendary;
@@ -606,8 +612,8 @@
   function pageHtml(b, i) {
     const cars = GL.brandCars(b).slice().sort((x, y) => GL.RARITY_ORDER.indexOf(x.rarity) - GL.RARITY_ORDER.indexOf(y.rarity));
     const done = cars.filter(c => GL.isComplete(S, c.id)).length, pcs = cars.reduce((a, c) => a + GL.count(S, c.id), 0);
-    const ctry = GL.COUNTRIES[cars[0].country];
-    return '<section class="apage" data-i="' + i + '" data-brand="' + esc(b) + '"><header class="ap-head"><div class="ap-brand">' + esc(b) + (S.brands.includes(b) ? ' 🛡️' : '') + '</div><div class="ap-sub">' + ctry.flag + ' ' + ctry.name + ' · ' + done + '/' + cars.length + (cars.length === 1 ? ' coche' : ' coches') + ' · ' + pcs + '/' + cars.length * 10 + ' cromos</div><div class="ap-bar"><span style="width:' + (pcs / (cars.length * 10) * 100) + '%"></span></div></header>' +
+    const ctry = knownBrand(b) ? GL.COUNTRIES[cars[0].country] : { flag: '❔', name: 'País secreto' };
+    return '<section class="apage" data-i="' + i + '" data-brand="' + esc(b) + '"><header class="ap-head"><div class="ap-brand">' + esc(brandName(b)) + (S.brands.includes(b) ? ' 🛡️' : '') + '</div><div class="ap-sub">' + ctry.flag + ' ' + ctry.name + ' · ' + done + '/' + cars.length + (cars.length === 1 ? ' coche' : ' coches') + ' · ' + pcs + '/' + cars.length * 10 + ' cromos</div><div class="ap-bar"><span style="width:' + (pcs / (cars.length * 10) * 100) + '%"></span></div></header>' +
       cars.map(acarHtml).join('') + '<footer class="ap-foot">— ' + (i + 1) + ' —</footer></section>';
   }
   function acarHtml(car) {
@@ -624,7 +630,7 @@
       }
       body = '<div class="ac-grid">' + cells + '</div>';
     }
-    return '<div class="acar ' + (done ? 'done' : cnt ? 'has' : '') + '" data-act="openCar" data-car="' + car.id + '"><div class="ac-head"><span class="ac-name">' + esc(car.model) + '</span>' + rarTag(car.rarity) + '</div>' + body +
+    return '<div class="acar ' + (done ? 'done' : cnt ? 'has' : '') + '" data-act="openCar" data-car="' + car.id + '"><div class="ac-head"><span class="ac-name">' + esc(carName(car)) + '</span>' + rarTag(car.rarity) + '</div>' + body +
       '<div class="ac-foot">' + (!unlocked ? 'Coche mítico' : done ? '✅ Completo · ' + GL.fmt.hp(car) + ' · ' + GL.fmt.top(car) : cnt ? cnt + ' de 10 cromos' : 'Aún sin cromos') + '</div></div>';
   }
   function setupBook(book) {
@@ -635,7 +641,7 @@
       i = Math.max(0, Math.min(GL.BRANDS.length - 1, i));
       if (!first && i !== ui.albumPage) sfx('flip');
       ui.albumPage = i;
-      $('#bookBrand').textContent = GL.BRANDS[i];
+      $('#bookBrand').textContent = brandName(GL.BRANDS[i]);
       $('#bookPos').textContent = 'Hoja ' + (i + 1) + ' de ' + GL.BRANDS.length + ' · índice';
       // los cromos nuevos de esta hoja ya se han visto "pegar"
       const b = GL.BRANDS[i];
@@ -656,8 +662,8 @@
   }
   function bookIndex() {
     openSheet('📖 Índice del álbum', GL.BRANDS.map((b, i) => {
-      const cars = GL.brandCars(b), pcs = cars.reduce((a, c) => a + GL.count(S, c.id), 0), fr = freshOf(b), ctry = GL.COUNTRIES[cars[0].country];
-      return '<div class="idx-row" data-act="bookJump" data-i="' + i + '"><span class="idx-n">' + (i + 1) + '</span><div class="grow"><b>' + esc(b) + '</b>' + (S.brands.includes(b) ? ' 🛡️' : '') + (fr ? ' <span class="newb" style="position:static">' + fr + ' NUEVO' + (fr > 1 ? 'S' : '') + '</span>' : '') + '<div class="tiny muted">' + ctry.flag + ' ' + ctry.name + ' · ' + pcs + '/' + cars.length * 10 + ' cromos</div><div class="progress mt8" style="height:5px"><span style="width:' + (pcs / (cars.length * 10) * 100) + '%"></span></div></div><span>›</span></div>';
+      const cars = GL.brandCars(b), pcs = cars.reduce((a, c) => a + GL.count(S, c.id), 0), fr = freshOf(b), ctry = knownBrand(b) ? GL.COUNTRIES[cars[0].country] : { flag: '❔', name: 'País secreto' };
+      return '<div class="idx-row" data-act="bookJump" data-i="' + i + '"><span class="idx-n">' + (i + 1) + '</span><div class="grow"><b>' + esc(brandName(b)) + '</b>' + (S.brands.includes(b) ? ' 🛡️' : '') + (fr ? ' <span class="newb" style="position:static">' + fr + ' NUEVO' + (fr > 1 ? 'S' : '') + '</span>' : '') + '<div class="tiny muted">' + ctry.flag + ' ' + ctry.name + ' · ' + pcs + '/' + cars.length * 10 + ' cromos</div><div class="progress mt8" style="height:5px"><span style="width:' + (pcs / (cars.length * 10) * 100) + '%"></span></div></div><span>›</span></div>';
     }).join(''));
   }
   function albumListView() {
@@ -677,7 +683,7 @@
       if (ui.status === 'DONE' && cnt < 10) return false;
       if (ui.status === 'PROGRESS' && (cnt === 0 || cnt >= 10)) return false;
       if (ui.status === 'UNKNOWN' && cnt > 0) return false;
-      if (q && !(c.brand + ' ' + c.model).toLowerCase().includes(q)) return false;
+      if (q && !(known(c) && (c.brand + ' ' + c.model).toLowerCase().includes(q)) && !(knownBrand(c.brand) && c.brand.toLowerCase().includes(q))) return false;
       return true;
     });
     if (!cars.length) return '<div class="empty">No hay coches con este filtro.</div>';
@@ -686,7 +692,7 @@
       const all = GL.CARS.filter(c => c.brand === b), list = cars.filter(c => c.brand === b);
       const done = all.filter(c => GL.isComplete(S, c.id)).length;
       const ctry = GL.COUNTRIES[all[0].country];
-      return '<div class="brand-head"><span>' + ctry.flag + '</span><span class="bn">' + esc(b) + '</span><span class="bp">' + done + '/' + all.length + ' completos</span></div>' +
+      return '<div class="brand-head"><span>' + flagOf(b) + '</span><span class="bn">' + esc(brandName(b)) + '</span><span class="bp">' + done + '/' + all.length + ' completos</span></div>' +
         '<div class="album-grid">' + list.sort((x, y) => GL.RARITY_ORDER.indexOf(x.rarity) - GL.RARITY_ORDER.indexOf(y.rarity)).map(tile).join('') + '</div>';
     }).join('');
   }
@@ -703,11 +709,11 @@
     if (S.newCars.includes(id)) { S.newCars = S.newCars.filter(x => x !== id); save(); }
     if (done) { S.stats.viewedCars++; save(); }
     let b = '<div class="car-hero ' + (done ? 'done' : '') + '">' + (done ? '<img src="' + carImg(id) + '" alt="' + esc(car.model) + '">' : unlocked ? puzzleCells(id, true) : '<div style="height:100%;display:grid;place-items:center;font-size:44px">🔒</div>') + '</div>';
-    b += '<div class="row between mt12 wrap gap6"><div>' + rarTag(car.rarity) + ' <span class="tag" style="background:#ffffff12">' + GL.COUNTRIES[car.country].flag + ' ' + esc(car.brand) + '</span></div><span class="small muted">' + cnt + '/10 cromos</span></div>';
-    b += '<div class="row between"><div class="car-title">' + esc(car.model) + '</div><button class="help-btn" data-act="help" data-k="car">❓</button></div>';
+    b += '<div class="row between mt12 wrap gap6"><div>' + rarTag(car.rarity) + ' <span class="tag" style="background:#ffffff12">' + flagOf(car.brand) + ' ' + esc(brandName(car.brand)) + '</span></div><span class="small muted">' + cnt + '/10 cromos</span></div>';
+    b += '<div class="row between"><div class="car-title">' + esc(known(car) ? car.model : 'Coche por descubrir') + '</div><button class="help-btn" data-act="help" data-k="car">❓</button></div>';
     if (!unlocked) {
       b += '<div class="card mt12 center">🔒 Este coche mítico se desbloquea al llegar al <b>nivel ' + car.unlock + '</b> de garaje.<div class="small muted mt8">Tú estás en el nivel ' + S.level + '. Sube de nivel consiguiendo cromos, completando misiones y tareas.</div></div>';
-      openSheet(esc(car.brand), b); return;
+      openSheet(esc(brandName(car.brand)), b); return;
     }
     if (done) {
       b += '<div class="card mt12"><b class="display small">FICHA TÉCNICA</b>' +
@@ -738,7 +744,7 @@
       b += '<div class="card mt12 small muted">🖼️ Completa este coche para desbloquear su <b>póster ilustrado</b>.</div>';
     }
     if (cr && cnt > 0) b += '<div class="credit">📷 Foto: ' + esc(cr.author || 'Wikimedia Commons') + ' · ' + esc(cr.license) + ' · <a href="' + esc(cr.url) + '" target="_blank" rel="noopener">Wikimedia Commons</a></div>';
-    openSheet(esc(car.brand), b, {
+    openSheet(esc(brandName(car.brand)), b, {
       onMount: w => { if (flashN) { const c = w.querySelector('.puzzle .cell[data-n="' + flashN + '"]'); if (c) c.classList.add('flash'); } }
     });
     if (!done && cnt > 0) setTimeout(() => tip('carDetail', '🧩', 'Toca una casilla oscura del puzle para ver qué dato esconde. Si tienes créditos, puedes fabricar ese cromo con el botón 🛠️.'), 500);
@@ -872,7 +878,7 @@
         sfx('legend'); confetti(['#fbbf24', '#fde68a', '#fff'], 220); buzz([100, 60, 100, 60, 200]);
       } else {
         const un = (e.unlocked || []);
-        openOverlay('<div class="celebrate"><div class="big">¡SUBES DE NIVEL!</div><div class="level-burst mt16">' + e.level + '</div><div class="card mt16">Premio: <b>' + GL.rewardText(e.reward) + '</b>' + (un.length ? '<br>🔓 Desbloqueado el coche mítico: <b>' + un.map(c => esc(c.brand + ' ' + c.model)).join(', ') + '</b>. ¡Ya puede salir en los sobres!' : '') + '</div><div class="open-actions"><button class="btn primary" data-act="evNext">Continuar</button></div></div>');
+        openOverlay('<div class="celebrate"><div class="big">¡SUBES DE NIVEL!</div><div class="level-burst mt16">' + e.level + '</div><div class="card mt16">Premio: <b>' + GL.rewardText(e.reward) + '</b>' + (un.length ? '<br>🔓 <b>¡Se ha desbloqueado un nuevo coche mítico!</b> Ya puede salir en tus sobres. ¿Cuál será?' : '') + '</div><div class="open-actions"><button class="btn primary" data-act="evNext">Continuar</button></div></div>');
         sfx('level'); confetti(['#22d3ee', '#818cf8', '#fff'], 120); buzz([50, 50, 100]);
       }
       ui.evNext = step;
@@ -1250,8 +1256,8 @@
   function creditsSheet() {
     const C = window.GL_CREDITS || {};
     openSheet('📷 Créditos', '<div class="small muted">Las fotos son de Wikimedia Commons, con licencias libres. Gracias a sus autores.</div>' +
-      GL.CARS.map(c => { const x = C[c.id]; return x ? '<div class="hist"><span><b>' + esc(c.brand + ' ' + c.model) + '</b><br><span class="tiny muted">' + esc(x.author) + ' · ' + esc(x.license) + ' · <a href="' + esc(x.url) + '" target="_blank" rel="noopener">ver</a></span></span></div>' : ''; }).join('') +
-      '<div class="small muted mt12">Pósters ilustrados: creados por la familia con IA.</div>');
+      GL.CARS.filter(known).map(c => { const x = C[c.id]; return x ? '<div class="hist"><span><b>' + esc(c.brand + ' ' + c.model) + '</b><br><span class="tiny muted">' + esc(x.author) + ' · ' + esc(x.license) + ' · <a href="' + esc(x.url) + '" target="_blank" rel="noopener">ver</a></span></span></div>' : ''; }).join('') +
+      '<div class="small muted mt12">Los créditos de las demás fotos aparecerán cuando descubras sus coches.<br>Pósters ilustrados y fondos del Salón de la Fama: creados por la familia con IA.</div>');
   }
 
   /* ================= Acciones (delegación de eventos) ================= */
@@ -1276,7 +1282,7 @@
     },
     craft: d => {
       const car = GL.carById[d.car];
-      if (!confirm('¿Fabricar el cromo #' + d.n + ' de ' + car.model + ' por ' + GL.craftCost(car) + ' créditos?')) return;
+      if (!confirm('¿Fabricar el cromo #' + d.n + ' de ' + (known(car) ? car.model : 'este coche misterioso') + ' por ' + GL.craftCost(car) + ' créditos?')) return;
       const r = GL.craft(S, d.car, +d.n); if (!r) return toast('No tienes créditos suficientes.');
       save(); sfx('new'); buzz(30); toast('🛠️ ¡Cromo fabricado! (' + r.card.countAfter + '/10)');
       closeSheet(); playEvents(r.events, () => { render(); if (!GL.isComplete(S, d.car)) openCar(d.car, +d.n); else openCar(d.car); });
@@ -1371,7 +1377,7 @@
     chest: () => openChestFlow(),
     chestOpen: () => chestOpen(),
     chestDone: () => { closeOverlay(); const ev = ui.pendingEvents || []; ui.pendingEvents = null; playEvents(ev, () => render()); },
-    marketInfo: () => toast('📈 Cada día una marca está de moda en el Mercado del Taller: sus cromos repetidos te dan el doble de créditos. Hoy: ' + GL.marketBrand() + '.'),
+    marketInfo: () => toast('📈 Cada día una marca está de moda en el Mercado del Taller: sus cromos repetidos te dan el doble de créditos. Hoy: ' + GL.marketBrand(S) + '.'),
     albumMode: () => { S.settings.albumMode = bookMode() ? 'list' : 'book'; save(); sfx('tap'); render(); },
     bookPrev: () => bookGo((ui.albumPage || 0) - 1),
     bookNext: () => bookGo((ui.albumPage || 0) + 1),
@@ -1390,7 +1396,7 @@
     setFavCard: d => { S.favorite = S.favorite === d.car ? null : d.car; save(); sfx('tap'); bigLegend(d.car); if (!$('#overlay').classList.contains('hidden') && $('.hall')) hall(), bigLegend(d.car); else render(); },
     nsOpen: () => { const t = ['standard', 'epic', 'legendary'].find(x => S.packs[x] > 0); go('packs'); if (t) openPackFlow(t); },
     setFav: d => { S.favorite = S.favorite === d.car ? null : d.car; save(); sfx('tap'); openCar(d.car); render(); },
-    emblemInfo: d => { const cars = GL.brandCars(d.b), done = cars.filter(c => GL.isComplete(S, c.id)).length; toast('🛡️ ' + d.b + ': ' + done + ' de ' + cars.length + ' coches completos. Premio: ' + GL.rewardText(GL.brandReward(d.b))); },
+    emblemInfo: d => { const cars = GL.brandCars(d.b), done = cars.filter(c => GL.isComplete(S, c.id)).length; toast('🛡️ ' + brandName(d.b) + ': ' + done + ' de ' + cars.length + ' coches completos. Premio: ' + GL.rewardText(GL.brandReward(d.b))); },
     trophyInfo: d => { const a = GL.ACHIEVEMENTS.find(x => x.id === d.id); if (a) toast(a.icon + ' ' + a.name + ': ' + a.desc + '. ' + (S.achievements.includes(a.id) ? '¡Conseguido!' : 'Premio: ' + GL.rewardText(a.reward))); },
     credits: () => creditsSheet(),
     license: () => licenseSheet(),
@@ -1419,8 +1425,8 @@
     if (!firstRun && S.tutorialDone && !S.seen.v26) {
       S.seen.v26 = true; S.packs.epic++; save();
       openOverlay('<div class="celebrate"><div style="font-size:60px">✨</div><div class="big">¡NOVEDADES EN EL GARAJE!</div><div class="card mt16 small" style="text-align:left">' +
-        '🔥 <b>Míticas modernas:</b> McLaren W1, Ferrari F80, Bugatti Tourbillon, Lamborghini Sián, Pagani Utopia y Gordon Murray T.50 se unen al Jesko, Valkyrie, Bolide y Huayra.<br><br>' +
-        '📻 Los coches antiguos pasan a una rareza propia: <b>Clásica</b>. Conservas todos tus cromos.<br><br>' +
+        '🔥 <b>Nuevos coches míticos</b> han llegado al garaje… ¿Serás capaz de descubrirlos? Se desbloquean subiendo de nivel.<br><br>' +
+        '📻 Los coches antiguos pasan a una rareza propia: <b>Clásica</b>. Conservas todos tus cromos.<br><br>🕵️ Los coches que aún no has descubierto ahora son un <b>misterio</b> hasta que te salga su primer cromo.<br><br>' +
         '📈 <b>Mercado del Taller:</b> cada día una marca está de moda y sus repetidos valen el doble. Y ahora todos los repetidos valen más.<br><br>' +
         '🎁 <b>Sorpresas:</b> cofres misteriosos y regalos por tus logros.</div>' +
         '<div class="card mt12">De regalo: <b>+1 Sobre Nitro</b></div><div class="open-actions"><button class="btn gold" data-act="closeOverlay">¡A jugar!</button></div></div>');

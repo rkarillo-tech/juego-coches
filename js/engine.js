@@ -187,7 +187,7 @@
       if (c.rarity === 'MYTHIC') s.stats.mythicPulled++;
       s.stats.cards++;
       if (dup) {
-        c.market = GL.marketBrand() === car.brand;
+        c.market = GL.marketBrand(s) === car.brand;
         c.scrap = R[c.rarity].scrap * (foil ? T.foilScrapMult : 1) * (c.market ? 2 : 1);
         s.credits += c.scrap;
         s.stats.dupes++;
@@ -283,9 +283,15 @@
   GL.rank = level => GL.RANKS.filter(r => level >= r.from).pop();
 
   /* ---------- Mercado del Taller: cada día una marca está de moda y sus repetidos valen el doble ---------- */
-  GL.marketBrand = function (day) {
-    const k = day || GL.dayKey();
-    return GL.BRANDS[hashStr('mercado|' + k) % GL.BRANDS.length];
+  /* La marca del día se elige entre las que ya ha descubierto (los repetidos solo salen de esas) y se guarda para todo el día */
+  GL.marketBrand = function (s) {
+    const k = GL.dayKey();
+    if (s && s.market && s.market.day === k) return s.market.brand;
+    let brands = s ? GL.BRANDS.filter(b => GL.brandCars(b).some(c => GL.isDiscovered(s, c.id))) : [];
+    if (!brands.length) brands = GL.BRANDS.filter(b => GL.brandCars(b).some(c => c.rarity === 'COMMON'));
+    const brand = brands[hashStr('mercado|' + k) % brands.length];
+    if (s) s.market = { day: k, brand };
+    return brand;
   };
 
   /* ---------- Taller ---------- */
@@ -547,21 +553,23 @@
     { key: 'year',   q: '¿Cuál es MÁS antiguo?',                  better: 'min', fmt: c => String(c.year) }
   ];
   GL.quizAvailable = function (s) { if (s.quiz.day !== GL.dayKey()) { s.quiz = { day: GL.dayKey(), plays: 0 }; } return T.quizPerDay - s.quiz.plays; };
-  GL.makeQuiz = function () {
+  GL.makeQuiz = function (pool) {
+    pool = (pool && pool.length >= 6) ? pool : GL.CARS;
     const qs = [];
     let guard = 0;
     while (qs.length < 5 && guard++ < 200) {
       if (qs.length % 2 === 1 && rand() < 0.6) {
         // ¿Qué coche es? (foto recortada)
-        const car = pick(GL.CARS);
-        const others = GL.CARS.filter(c => c.id !== car.id && c.brand !== car.brand);
+        const car = pick(pool);
+        const others = pool.filter(c => c.id !== car.id && c.brand !== car.brand);
+        if (others.length < 3) continue;
         const opts = [car];
         while (opts.length < 4) { const o = pick(others); if (!opts.includes(o)) opts.push(o); }
         opts.sort(() => rand() - 0.5);
         qs.push({ type: 'guess', carId: car.id, options: opts.map(o => o.id), answer: car.id, region: pick([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) });
       } else {
         const st = pick(GL.QUIZ_STATS);
-        const a = pick(GL.CARS), b = pick(GL.CARS);
+        const a = pick(pool), b = pick(pool);
         if (a.id === b.id || a[st.key] === b[st.key]) continue;
         if ((a.approx || []).includes(st.key) || (b.approx || []).includes(st.key)) continue;
         const ans = (st.better === 'max' ? (a[st.key] > b[st.key]) : (a[st.key] < b[st.key])) ? a.id : b.id;
@@ -573,7 +581,10 @@
   GL.startQuiz = function (s) {
     if (GL.quizAvailable(s) <= 0) return null;
     s.quiz.plays++;            // se cuenta al empezar: salir a mitad no da otra oportunidad
-    return GL.makeQuiz();
+    // sin destripes: solo coches que ya ha descubierto, más los comunes del día a día
+    let pool = GL.CARS.filter(c => GL.isDiscovered(s, c.id) || c.rarity === 'COMMON');
+    if (pool.length < 14) pool = pool.concat(GL.CARS.filter(c => c.rarity === 'RARE' && !pool.includes(c)));
+    return GL.makeQuiz(pool);
   };
   GL.finishQuiz = function (s, hits) {
     s.stats.quizPlayed++;
