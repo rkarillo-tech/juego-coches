@@ -1424,12 +1424,10 @@
     if (P.isParentDevice && !firstRun) return;
     if (!firstRun && S.tutorialDone && !S.seen.v26) {
       S.seen.v26 = true; S.packs.epic++; save();
-      openOverlay('<div class="celebrate"><div style="font-size:60px">✨</div><div class="big">¡NOVEDADES EN EL GARAJE!</div><div class="card mt16 small" style="text-align:left">' +
-        '🔥 <b>Nuevos coches míticos</b> han llegado al garaje… ¿Serás capaz de descubrirlos? Se desbloquean subiendo de nivel.<br><br>' +
-        '📻 Los coches antiguos pasan a una rareza propia: <b>Clásica</b>. Conservas todos tus cromos.<br><br>🕵️ Los coches que aún no has descubierto ahora son un <b>misterio</b> hasta que te salga su primer cromo.<br><br>' +
-        '📈 <b>Mercado del Taller:</b> cada día una marca está de moda y sus repetidos valen el doble. Y ahora todos los repetidos valen más.<br><br>' +
-        '🎁 <b>Sorpresas:</b> cofres misteriosos y regalos por tus logros.</div>' +
-        '<div class="card mt12">De regalo: <b>+1 Sobre Nitro</b></div><div class="open-actions"><button class="btn gold" data-act="closeOverlay">¡A jugar!</button></div></div>');
+      openOverlay('<div class="celebrate"><div style="font-size:64px">🔧</div><div class="big">¡EL GARAJE SE HA RENOVADO!</div>' +
+        '<div class="card mt16" style="font-size:17px;line-height:1.6">Hay coches nuevos esperando a ser descubiertos… algunos han cambiado de categoría… y quizá haya alguna sorpresa escondida. 👀</div>' +
+        '<div class="card mt12">Tu regalo de bienvenida: <b>+1 Sobre Nitro</b></div><div class="open-actions"><button class="btn gold" data-act="closeOverlay">¡A descubrirlo!</button></div></div>');
+      autoSpeak('¡El garaje se ha renovado! Hay coches nuevos esperando a ser descubiertos, algunos han cambiado de categoría, y quizá haya alguna sorpresa escondida. Tu regalo de bienvenida: un sobre Nitro.');
       return;
     }
     S.seen.v26 = true;
