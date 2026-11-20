@@ -417,3 +417,18 @@ img { -webkit-touch-callout: none; -webkit-user-drag: none; user-select: none; }
 .chest-big { font-size: 130px; margin: 30px 0 10px; cursor: pointer; filter: drop-shadow(0 10px 30px #fbbf2488); animation: bob 1.6s ease-in-out infinite; user-select: none; }
 .chest-big.shake { animation: packShake .6s ease-in-out; }
 .surprise-box { font-size: 96px; animation: popIn .7s cubic-bezier(.2,.9,.3,1.4); filter: drop-shadow(0 8px 24px #fbbf2488); }
+
+/* ===== Cromos nuevos boca abajo ===== */
+.new-banner { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; text-align: left; color: var(--text);
+  background: linear-gradient(135deg, #3b2a06, #10213a 70%); border: 2px solid var(--gold); box-shadow: 0 0 22px -6px var(--gold); animation: chestPulse 1.8s ease-in-out infinite; }
+.new-banner .nb-cards { font-size: 30px; animation: bob 1.4s ease-in-out infinite; }
+.new-banner b { display: block; font-size: 16px; } .new-banner .small { color: #e8dcc0; }
+.st.back { cursor: pointer; border: 2px solid #fbbf24; border-radius: 4px; background: radial-gradient(circle at 50% 40%, #3a2c10, #120d05 75%);
+  box-shadow: 0 0 10px #fbbf24aa, 0 2px 4px rgba(0,0,0,.5); animation: backGlow 1.2s ease-in-out infinite; z-index: 2; }
+.st.back span { font-family: var(--display); font-weight: 900; font-size: 18px; color: #fbbf24; text-shadow: 0 0 8px #fbbf24; }
+@keyframes backGlow { 50% { box-shadow: 0 0 18px 2px #fbbf24cc, 0 2px 4px rgba(0,0,0,.5); transform: scale(1.04); } }
+.st.peel { animation: peelFlip .65s cubic-bezier(.3,.9,.3,1.2); z-index: 3; }
+@keyframes peelFlip { 0% { transform: perspective(400px) rotateY(180deg) scale(1.25); filter: brightness(2); } 55% { transform: perspective(400px) rotateY(0) scale(1.15); } 100% { transform: none; filter: none; } }
+.acar.fresh .ac-head .ac-name::after { content: ' ✨'; }
+.ac-brand { font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8a6d2f; margin-bottom: 2px; }
+.apage.flow { height: auto; overflow: visible; max-width: 640px; margin: 0 auto; }

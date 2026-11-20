@@ -3,7 +3,7 @@
    son estimaciones o cifras no oficiales. Revisa y amplía aquí: cada coche = 10 cromos. */
 window.GL = window.GL || {};
 
-GL.VERSION = '2.6.2';
+GL.VERSION = '2.7.0';
 GL.REPO = 'https://github.com/rkarillo-tech/juego-coches';
 
 GL.RARITIES = {

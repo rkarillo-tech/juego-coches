@@ -2,7 +2,7 @@
 
 Álbum de cromos digital de coches para el móvil. Es una web instalable (PWA): funciona sin conexión y no necesita tienda de aplicaciones ni servidor propio.
 
-**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.6.2
+**Versión web:** https://rkarillo-tech.github.io/juego-coches/ (instalable y sin conexión) · Versión 2.7.0
 
 ## Qué incluye
 
@@ -15,6 +15,7 @@
 - **Pensado para dislexia:** modo lectura fácil (letra más grande, más espacio entre letras, palabras y líneas, sin mayúsculas continuas), botón 🔊 para escuchar cualquier explicación, tutorial guiado de 13 pasos que señala dónde tocar, ayuda «¿Cómo funciona?» en cada pantalla, ayudas que aparecen la primera vez que se usa cada cosa y un cuadro verde «¿Qué hago ahora?».
 - **Coleccionables:** cada coche completo da una medalla de bronce que se mejora a plata (acertar 3 preguntas de ese coche en el Desafío) y a oro (5 repetidos de ese coche). Además hay insignias por completar marcas, trofeos, rangos de piloto (de Aprendiz a Leyenda), coche favorito en Inicio y una Vitrina para verlo todo.
 - **Álbum en hojas:** una hoja de papel por marca, con huecos numerados donde se «pegan» los cromos; se pasa de hoja deslizando, tiene índice y los cromos nuevos se ven pegarse al abrir su hoja.
+- **Cromos nuevos con sorpresa:** llegan boca abajo al álbum y hay que tocarlos para darles la vuelta; el botón «cromos nuevos» muestra solo los coches que los tienen.
 - **Cartas de Leyenda y Salón de la Fama:** cada coche completado se convierte en una carta metálica con su foto, sus datos y número de serie. El marco es de bronce, plata u oro según la medalla, brilla al inclinar el móvil y se puede **descargar para imprimir** a tamaño de cromo. Todas se exponen en el Salón de la Fama.
 - **Mercado del Taller y sorpresas:** cada día una marca está de moda y sus repetidos valen el doble; cofres misteriosos de vez en cuando y regalos sorpresa al alcanzar hitos (cromos, tareas, coches, rachas).
 - **Panel de padres:** tareas y premios editables, límite diario de aprobaciones, resumen, copias de seguridad y herramientas.
